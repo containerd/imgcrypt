@@ -11,3 +11,8 @@ linters:
     - vet
     - unused
     - misspell
+
+run:
+  skip-dirs:
+    - cmd/ctr/commands/run
+    - cmd/ctr/commands/images

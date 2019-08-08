@@ -16,13 +16,18 @@
 
 all: build decoder
 
-build: decoder
+build: decoder ctr
 
-decoder:
+FORCE:
+
+decoder: FORCE
 	go build -v ./cmd/ctd-decoder/
+
+ctr: FORCE
+	go build -v ./cmd/ctr/
 
 check:
 	golangci-lint run
 
 clean:
-	rm -f ctd-decoder
+	rm -f ctd-decoder ctr
