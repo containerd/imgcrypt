@@ -32,7 +32,9 @@ before_install:
 
 install:
   - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin v1.15.0
+  - sudo PATH=$PATH GOPATH=$GOPATH script/setup/install-runc
 
 script:
   - make check
   - make
+  - CONTAINERD=$(type -P containerd) ./script/tests/test_encryption.sh
