@@ -71,16 +71,16 @@ func HasEncryptedLayer(ctx context.Context, layerInfos []ocispec.Descriptor) boo
 // encryptLayer encrypts the layer using the CryptoConfig and creates a new OCI Descriptor.
 // A call to this function may also only manipulate the wrapped keys list.
 // The caller is expected to store the returned encrypted data and OCI Descriptor
-func encryptLayer(cc *encconfig.CryptoConfig, dataReader content.ReaderAt, desc ocispec.Descriptor) (ocispec.Descriptor, io.Reader, error) {
+func encryptLayer(cc *encconfig.CryptoConfig, dataReader content.ReaderAt, desc ocispec.Descriptor) (ocispec.Descriptor, io.Reader, encryption.EncryptLayerFinalizer, error) {
 	var (
 		size int64
 		d    digest.Digest
 		err  error
 	)
 
-	encLayerReader, annotations, err := encryption.EncryptLayer(cc.EncryptConfig, encryption.ReaderFromReaderAt(dataReader), desc)
+	encLayerReader, encLayerFinalizer, err := encryption.EncryptLayer(cc.EncryptConfig, encryption.ReaderFromReaderAt(dataReader), desc)
 	if err != nil {
-		return ocispec.Descriptor{}, nil, err
+		return ocispec.Descriptor{}, nil, nil, err
 	}
 
 	// were data touched ?
@@ -93,10 +93,9 @@ func encryptLayer(cc *encconfig.CryptoConfig, dataReader content.ReaderAt, desc 
 	}
 
 	newDesc := ocispec.Descriptor{
-		Digest:      d,
-		Size:        size,
-		Platform:    desc.Platform,
-		Annotations: annotations,
+		Digest:   d,
+		Size:     size,
+		Platform: desc.Platform,
 	}
 
 	switch desc.MediaType {
@@ -116,10 +115,10 @@ func encryptLayer(cc *encconfig.CryptoConfig, dataReader content.ReaderAt, desc 
 		newDesc.MediaType = images.MediaTypeDockerSchema2LayerEnc
 
 	default:
-		return ocispec.Descriptor{}, nil, errors.Errorf("Encryption: unsupporter layer MediaType: %s\n", desc.MediaType)
+		return ocispec.Descriptor{}, nil, nil, errors.Errorf("Encryption: unsupporter layer MediaType: %s\n", desc.MediaType)
 	}
 
-	return newDesc, encLayerReader, nil
+	return newDesc, encLayerReader, encLayerFinalizer, nil
 }
 
 // DecryptLayer decrypts the layer using the DecryptConfig and creates a new OCI Descriptor.
@@ -174,8 +173,9 @@ func decryptLayer(cc *encconfig.CryptoConfig, dataReader content.ReaderAt, desc 
 // cryptLayer handles the changes due to encryption or decryption of a layer
 func cryptLayer(ctx context.Context, cs content.Store, desc ocispec.Descriptor, cc *encconfig.CryptoConfig, cryptoOp cryptoOp) (ocispec.Descriptor, error) {
 	var (
-		resultReader io.Reader
-		newDesc      ocispec.Descriptor
+		resultReader      io.Reader
+		newDesc           ocispec.Descriptor
+		encLayerFinalizer encryption.EncryptLayerFinalizer
 	)
 
 	dataReader, err := cs.ReaderAt(ctx, desc)
@@ -185,7 +185,7 @@ func cryptLayer(ctx context.Context, cs content.Store, desc ocispec.Descriptor, 
 	defer dataReader.Close()
 
 	if cryptoOp == cryptoOpEncrypt {
-		newDesc, resultReader, err = encryptLayer(cc, dataReader, desc)
+		newDesc, resultReader, encLayerFinalizer, err = encryptLayer(cc, dataReader, desc)
 	} else {
 		newDesc, resultReader, err = decryptLayer(cc, dataReader, desc, cryptoOp == cryptoOpUnwrapOnly)
 	}
@@ -220,6 +220,17 @@ func cryptLayer(ctx context.Context, cs content.Store, desc ocispec.Descriptor, 
 			if err != nil {
 				return ocispec.Descriptor{}, err
 			}
+		}
+	}
+
+	// After performing encryption, call finalizer to get annotations
+	if encLayerFinalizer != nil {
+		annotations, err := encLayerFinalizer()
+		if err != nil {
+			return ocispec.Descriptor{}, errors.Wrap(err, "Error getting annotations from encLayer finalizer")
+		}
+		for k, v := range annotations {
+			newDesc.Annotations[k] = v
 		}
 	}
 	return newDesc, err
