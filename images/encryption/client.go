@@ -23,6 +23,7 @@ import (
 	"github.com/containerd/containerd/containers"
 	"github.com/containerd/containerd/diff"
 	"github.com/containerd/containerd/errdefs"
+	"github.com/containerd/imgcrypt"
 	encconfig "github.com/containerd/imgcrypt/pkg/encryption/config"
 	"github.com/containerd/typeurl"
 	"github.com/gogo/protobuf/types"
@@ -30,19 +31,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-// LayerToolDecryptData holds data that the external layer decryption tool
-// needs for decrypting a layer
-type LayerToolDecryptData struct {
-	DecryptConfig encconfig.DecryptConfig
-	Descriptor    ocispec.Descriptor
-}
-
-func init() {
-	typeurl.Register(&LayerToolDecryptData{}, "LayerToolDecryptData")
-}
-
 // WithDecryptedUnpack allows to pass parameters the 'layertool' needs to the applier
-func WithDecryptedUnpack(data *LayerToolDecryptData) diff.ApplyOpt {
+func WithDecryptedUnpack(data *imgcrypt.Payload) diff.ApplyOpt {
 	return func(_ context.Context, desc ocispec.Descriptor, c *diff.ApplyConfig) error {
 		if c.ProcessorPayloads == nil {
 			c.ProcessorPayloads = make(map[string]*types.Any)
@@ -50,12 +40,12 @@ func WithDecryptedUnpack(data *LayerToolDecryptData) diff.ApplyOpt {
 		data.Descriptor = desc
 		any, err := typeurl.MarshalAny(data)
 		if err != nil {
-			return errors.Wrapf(err, "failed to typeurl.MarshalAny(LayerToolDecryptData)")
+			return errors.Wrapf(err, "failed to marshal payload")
 		}
 
-		c.ProcessorPayloads["io.containerd.layertool.tar"] = any
-		c.ProcessorPayloads["io.containerd.layertool.tar.gzip"] = any
-
+		for _, id := range imgcrypt.PayloadToolIDs {
+			c.ProcessorPayloads[id] = any
+		}
 		return nil
 	}
 }

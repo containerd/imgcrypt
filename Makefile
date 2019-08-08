@@ -12,12 +12,15 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-.PHONY: check build
+.PHONY: check build decoder
 
 all: build
 
 build:
-	go build -v ./...
+	go build -v  ./...
+
+decoder:
+	go build -v cmd/ctd-decoder/
 
 check:
 	golangci-lint run
