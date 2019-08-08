@@ -32,6 +32,7 @@ import (
 func main() {
 	if err := decrypt(); err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
+		os.Exit(1)
 	}
 }
 
