@@ -13,8 +13,22 @@ matrix:
 
 go_import_path: github.com/containerd/imgcrypt
 
+addons:
+  apt:
+    packages:
+      - libseccomp-dev
+
 before_install:
   - uname -r
+  - |
+    pushd ..
+    git clone https://github.com/containerd/containerd.git
+    pushd containerd
+    make -j$(nproc)
+    sudo make install
+    sudo rm -f $(type -P ctr)
+    popd
+    popd
 
 install:
   - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin v1.15.0
