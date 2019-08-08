@@ -23,7 +23,7 @@ import (
 	"github.com/containerd/containerd/containers"
 	"github.com/containerd/containerd/diff"
 	"github.com/containerd/containerd/errdefs"
-	encconfig "github.com/containerd/ocicrypto/pkg/encryption/config"
+	encconfig "github.com/containerd/ocicrypt/pkg/encryption/config"
 	"github.com/containerd/typeurl"
 	"github.com/gogo/protobuf/types"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
