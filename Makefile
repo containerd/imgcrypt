@@ -17,7 +17,7 @@
 all: build
 
 build:
-	go build images/encryption/*.go
+	go build -v ./...
 
 check:
 	golangci-lint run
