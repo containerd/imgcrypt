@@ -20,9 +20,9 @@ import (
 	"crypto"
 	"crypto/x509"
 
-	"github.com/containerd/ocicrypt/pkg/encryption/config"
-	"github.com/containerd/ocicrypt/pkg/encryption/keywrap"
-	"github.com/containerd/ocicrypt/pkg/encryption/utils"
+	"github.com/containerd/imgcrypt/pkg/encryption/config"
+	"github.com/containerd/imgcrypt/pkg/encryption/keywrap"
+	"github.com/containerd/imgcrypt/pkg/encryption/utils"
 	"github.com/fullsailor/pkcs7"
 	"github.com/pkg/errors"
 )

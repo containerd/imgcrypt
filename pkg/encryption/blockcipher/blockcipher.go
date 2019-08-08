@@ -28,8 +28,7 @@ type LayerCipherType string
 
 // TODO: Should be obtained from OCI spec once included
 const (
-	AESSIVCMAC256 LayerCipherType = "AEAD_AES_SIV_CMAC_STREAM_256"
-	AESSIVCMAC512 LayerCipherType = "AEAD_AES_SIV_CMAC_STREAM_512"
+	AES256CTR     LayerCipherType = "AES_256_CTR"
 	CipherTypeOpt string          = "type"
 )
 
@@ -49,15 +48,19 @@ type LayerBlockCipherOptions struct {
 	CipherOptions map[string][]byte `json:"cipheroptions"`
 }
 
+// SetHmac allows a client to pass in a function that the block cipher
+// passes the calculated HMAC to after encrypting the stream.
+type SetHmac func([]byte)
+
 // LayerBlockCipher returns a provider for encrypt/decrypt functionality
 // for handling the layer data for a specific algorithm
 type LayerBlockCipher interface {
 	// GenerateKey creates a symmetric key
-	GenerateKey() []byte
+	GenerateKey() ([]byte, error)
 	// Encrypt takes in layer data and returns the ciphertext and relevant LayerBlockCipherOptions
-	Encrypt(layerDataReader io.Reader, opt LayerBlockCipherOptions) (io.Reader, LayerBlockCipherOptions, error)
+	Encrypt(layerDataReader io.Reader, opt LayerBlockCipherOptions, setHmac SetHmac) (io.Reader, LayerBlockCipherOptions, error)
 	// Decrypt takes in layer ciphertext data and returns the plaintext and relevant LayerBlockCipherOptions
-	Decrypt(layerDataReader io.Reader, opt LayerBlockCipherOptions) (io.Reader, LayerBlockCipherOptions, error)
+	Decrypt(layerDataReader io.Reader, opt LayerBlockCipherOptions, hmac []byte) (io.Reader, LayerBlockCipherOptions, error)
 }
 
 // LayerBlockCipherHandler is the handler for encrypt/decrypt for layers
@@ -66,13 +69,17 @@ type LayerBlockCipherHandler struct {
 }
 
 // Encrypt is the handler for the layer decryption routine
-func (h *LayerBlockCipherHandler) Encrypt(plainDataReader io.Reader, typ LayerCipherType) (io.Reader, LayerBlockCipherOptions, error) {
+func (h *LayerBlockCipherHandler) Encrypt(plainDataReader io.Reader, typ LayerCipherType, setHmac SetHmac) (io.Reader, LayerBlockCipherOptions, error) {
 
 	if c, ok := h.cipherMap[typ]; ok {
-		opt := LayerBlockCipherOptions{
-			SymmetricKey: c.GenerateKey(),
+		sk, err := c.GenerateKey()
+		if err != nil {
+			return nil, LayerBlockCipherOptions{}, err
 		}
-		encDataReader, newopt, err := c.Encrypt(plainDataReader, opt)
+		opt := LayerBlockCipherOptions{
+			SymmetricKey: sk,
+		}
+		encDataReader, newopt, err := c.Encrypt(plainDataReader, opt, setHmac)
 		if err == nil {
 			newopt.CipherOptions[CipherTypeOpt] = []byte(typ)
 		}
@@ -82,13 +89,13 @@ func (h *LayerBlockCipherHandler) Encrypt(plainDataReader io.Reader, typ LayerCi
 }
 
 // Decrypt is the handler for the layer decryption routine
-func (h *LayerBlockCipherHandler) Decrypt(encDataReader io.Reader, opt LayerBlockCipherOptions) (io.Reader, LayerBlockCipherOptions, error) {
+func (h *LayerBlockCipherHandler) Decrypt(encDataReader io.Reader, opt LayerBlockCipherOptions, hmac []byte) (io.Reader, LayerBlockCipherOptions, error) {
 	typ, ok := opt.CipherOptions[CipherTypeOpt]
 	if !ok {
 		return nil, LayerBlockCipherOptions{}, errors.New("no cipher type provided")
 	}
 	if c, ok := h.cipherMap[LayerCipherType(typ)]; ok {
-		return c.Decrypt(encDataReader, opt)
+		return c.Decrypt(encDataReader, opt, hmac)
 	}
 	return nil, LayerBlockCipherOptions{}, errors.Errorf("unsupported cipher type: %s", typ)
 }
@@ -100,14 +107,9 @@ func NewLayerBlockCipherHandler() (*LayerBlockCipherHandler, error) {
 	}
 
 	var err error
-	h.cipherMap[AESSIVCMAC256], err = NewAESSIVLayerBlockCipher(256)
+	h.cipherMap[AES256CTR], err = NewAESCTRLayerBlockCipher(256)
 	if err != nil {
-		return nil, errors.Wrap(err, "unable to set up Cipher AES-SIV-CMAC-256")
-	}
-
-	h.cipherMap[AESSIVCMAC512], err = NewAESSIVLayerBlockCipher(512)
-	if err != nil {
-		return nil, errors.Wrap(err, "unable to set up Cipher AES-SIV-CMAC-512")
+		return nil, errors.Wrap(err, "unable to set up Cipher AES-256-CTR")
 	}
 
 	return &h, nil

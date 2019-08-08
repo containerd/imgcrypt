@@ -25,8 +25,8 @@ import (
 	"math/rand"
 
 	"github.com/containerd/containerd/images"
-	"github.com/containerd/ocicrypt/pkg/encryption"
-	encconfig "github.com/containerd/ocicrypt/pkg/encryption/config"
+	"github.com/containerd/imgcrypt/pkg/encryption"
+	encconfig "github.com/containerd/imgcrypt/pkg/encryption/config"
 
 	"github.com/containerd/containerd/content"
 	"github.com/containerd/containerd/errdefs"
