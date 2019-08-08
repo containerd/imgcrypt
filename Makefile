@@ -14,13 +14,15 @@
 
 .PHONY: check build decoder
 
-all: build
+all: build decoder
 
-build:
-	go build -v  ./...
+build: decoder
 
 decoder:
-	go build -v cmd/ctd-decoder/
+	go build -v ./cmd/ctd-decoder/
 
 check:
 	golangci-lint run
+
+clean:
+	rm -f ctd-decoder
