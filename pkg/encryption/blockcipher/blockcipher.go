@@ -80,6 +80,7 @@ type LayerBlockCipherHandler struct {
 	cipherMap map[LayerCipherType]LayerBlockCipher
 }
 
+// Finalizer is called after data blobs are written, and returns the LayerBlockCipherOptions for the encrypted blob
 type Finalizer func() (LayerBlockCipherOptions, error)
 
 // GetOpt returns the value of the cipher option and if the option exists
@@ -98,7 +99,7 @@ func (lbco LayerBlockCipherOptions) SymmetricKey() []byte {
 	return lbco.Private.SymmetricKey
 }
 
-// SymmetricKey returns the value of the symmetric key for the cipher
+// OriginalDigest returns the value of the original digest of the unencrypted blob
 func (lbco LayerBlockCipherOptions) OriginalDigest() digest.Digest {
 	return lbco.Private.Digest
 }
