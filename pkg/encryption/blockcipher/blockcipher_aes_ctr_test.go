@@ -45,10 +45,11 @@ func TestBlockCipherAesCtrEncryption(t *testing.T) {
 	var (
 		symKey = []byte("01234567890123456789012345678912")
 		opt    = LayerBlockCipherOptions{
-			SymmetricKey: symKey,
+			Private: PrivateLayerBlockCipherOptions{
+				SymmetricKey: symKey,
+			},
 		}
 		layerData = []byte("this is some data")
-		myhmac    []byte
 	)
 
 	bc, err := NewAESCTRLayerBlockCipher(256)
@@ -57,10 +58,7 @@ func TestBlockCipherAesCtrEncryption(t *testing.T) {
 	}
 
 	layerDataReader := bytes.NewReader(layerData)
-	setHmac := func(hmac []byte) {
-		myhmac = hmac
-	}
-	ciphertextReader, lbco, err := bc.Encrypt(layerDataReader, opt, setHmac)
+	ciphertextReader, finalizer, err := bc.Encrypt(layerDataReader, opt)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,14 +74,15 @@ func TestBlockCipherAesCtrEncryption(t *testing.T) {
 	if err != io.EOF {
 		t.Fatal("Expected EOF")
 	}
-	// HMAC must be available after Read() of encrypted data
-	if len(myhmac) == 0 {
-		t.Fatal("HMAC has not been calculated")
-	}
 
 	ciphertextTestReader := bytes.NewReader(ciphertext[:encsize])
 
-	plaintextReader, _, err := bc2.Decrypt(ciphertextTestReader, lbco, myhmac)
+	lbco, err := finalizer()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	plaintextReader, _, err := bc2.Decrypt(ciphertextTestReader, lbco)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,10 +102,11 @@ func TestBlockCipherAesCtrEncryptionInvalidKey(t *testing.T) {
 	var (
 		symKey = []byte("01234567890123456789012345678912")
 		opt    = LayerBlockCipherOptions{
-			SymmetricKey: symKey,
+			Private: PrivateLayerBlockCipherOptions{
+				SymmetricKey: symKey,
+			},
 		}
 		layerData = []byte("this is some data")
-		myhmac    []byte
 	)
 
 	bc, err := NewAESCTRLayerBlockCipher(256)
@@ -115,10 +115,8 @@ func TestBlockCipherAesCtrEncryptionInvalidKey(t *testing.T) {
 	}
 
 	layerDataReader := bytes.NewReader(layerData)
-	setHmac := func(hmac []byte) {
-		myhmac = hmac
-	}
-	ciphertextReader, lbco, err := bc.Encrypt(layerDataReader, opt, setHmac)
+
+	ciphertextReader, finalizer, err := bc.Encrypt(layerDataReader, opt)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -129,20 +127,20 @@ func TestBlockCipherAesCtrEncryptionInvalidKey(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	lbco.SymmetricKey = []byte("aaa34567890123456789012345678912")
-
 	ciphertext := make([]byte, 1024)
 	encsize, err := ciphertextReader.Read(ciphertext)
 	if err != io.EOF {
 		t.Fatal("Expected EOF")
 	}
-	// HMAC must be available after Read() to get encrypted data
-	if len(myhmac) == 0 {
-		t.Fatal("HMAC has not been calculated")
-	}
 	ciphertextTestReader := bytes.NewReader(ciphertext[:encsize])
 
-	plaintextReader, _, err := bc2.Decrypt(ciphertextTestReader, lbco, myhmac)
+	lbco, err := finalizer()
+	if err != nil {
+		t.Fatal(err)
+	}
+	lbco.Private.SymmetricKey = []byte("aaa34567890123456789012345678912")
+
+	plaintextReader, _, err := bc2.Decrypt(ciphertextTestReader, lbco)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -161,7 +159,9 @@ func TestBlockCipherAesCtrEncryptionInvalidKeyLength(t *testing.T) {
 	var (
 		symKey = []byte("012345")
 		opt    = LayerBlockCipherOptions{
-			SymmetricKey: symKey,
+			Private: PrivateLayerBlockCipherOptions{
+				SymmetricKey: symKey,
+			},
 		}
 		layerData = []byte("this is some data")
 	)
@@ -172,8 +172,7 @@ func TestBlockCipherAesCtrEncryptionInvalidKeyLength(t *testing.T) {
 	}
 
 	layerDataReader := bytes.NewReader(layerData)
-	setHmac := func(hmac []byte) {}
-	_, _, err = bc.Encrypt(layerDataReader, opt, setHmac)
+	_, _, err = bc.Encrypt(layerDataReader, opt)
 	if err == nil {
 		t.Fatal("Test should have failed due to invalid key length")
 	}
