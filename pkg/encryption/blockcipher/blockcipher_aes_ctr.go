@@ -26,6 +26,7 @@ import (
 	"hash"
 	"io"
 
+	"github.com/containerd/imgcrypt/pkg/encryption/utils"
 	"github.com/pkg/errors"
 )
 
@@ -62,16 +63,12 @@ func (r *aesctrcryptor) Read(p []byte) (int, error) {
 		return 0, r.bc.err
 	}
 
-	for o = 0; o < len(p); {
-		n, err := r.bc.reader.Read(p[o:])
-		o += n
-		if err != nil {
-			if err == io.EOF {
-				r.bc.err = err
-				break
-			} else {
-				return 0, err
-			}
+	o, err := utils.FillBuffer(r.bc.reader, p)
+	if err != nil {
+		if err == io.EOF {
+			r.bc.err = err
+		} else {
+			return 0, err
 		}
 	}
 
