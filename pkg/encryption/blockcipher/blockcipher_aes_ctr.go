@@ -42,8 +42,7 @@ type AESCTRLayerBlockCipher struct {
 }
 
 type aesctrcryptor struct {
-	bc           *AESCTRLayerBlockCipher
-	outputReader io.Reader
+	bc *AESCTRLayerBlockCipher
 }
 
 // NewAESCTRLayerBlockCipher returns a new AES SIV block cipher of 256 or 512 bits
@@ -176,7 +175,7 @@ func (bc *AESCTRLayerBlockCipher) Encrypt(plainDataReader io.Reader, opt LayerBl
 		lbco.Public.CipherOptions["hmac"] = bc.hmac.Sum(nil)
 		return lbco, nil
 	}
-	return &aesctrcryptor{bc, nil}, finalizer, nil
+	return &aesctrcryptor{bc}, finalizer, nil
 }
 
 // Decrypt takes in layer ciphertext data and returns the plaintext and relevant LayerBlockCipherOptions
@@ -186,5 +185,5 @@ func (bc *AESCTRLayerBlockCipher) Decrypt(encDataReader io.Reader, opt LayerBloc
 		return nil, LayerBlockCipherOptions{}, err
 	}
 
-	return &aesctrcryptor{bc, nil}, lbco, nil
+	return &aesctrcryptor{bc}, lbco, nil
 }
