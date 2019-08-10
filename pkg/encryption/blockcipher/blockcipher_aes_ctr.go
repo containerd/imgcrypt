@@ -185,5 +185,5 @@ func (bc *AESCTRLayerBlockCipher) Decrypt(encDataReader io.Reader, opt LayerBloc
 		return nil, LayerBlockCipherOptions{}, err
 	}
 
-	return &aesctrcryptor{bc}, lbco, nil
+	return utils.NewDelayedReader(&aesctrcryptor{bc}, 1024*10), lbco, nil
 }
