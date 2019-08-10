@@ -36,5 +36,6 @@ install:
 
 script:
   - make check
+  - make test
   - make
   - CONTAINERD=$(type -P containerd) ./script/tests/test_encryption.sh

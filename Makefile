@@ -31,3 +31,6 @@ check:
 
 clean:
 	rm -f ctd-decoder ctr
+
+test:
+	go test ./...
