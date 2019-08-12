@@ -309,3 +309,18 @@ func commonDecryptLayer(encLayerReader io.Reader, privOptsData []byte, pubOptsDa
 
 	return plainLayerReader, opts.Private.Digest, nil
 }
+
+// FilterOutAnnotations filters out the annotations belonging to the image encryption 'namespace'
+// and returns a map with those taken out
+func FilterOutAnnotations(annotations map[string]string) map[string]string {
+	a := make(map[string]string)
+	if len(annotations) > 0 {
+		for k, v := range annotations {
+			if strings.HasPrefix(k, "org.opencontainers.image.enc.") {
+				continue
+			}
+			a[k] = v
+		}
+	}
+	return a
+}
