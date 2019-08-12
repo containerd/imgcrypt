@@ -26,6 +26,7 @@ import (
 	"hash"
 	"io"
 
+	"github.com/containerd/imgcrypt/pkg/encryption/utils"
 	"github.com/pkg/errors"
 )
 
@@ -42,8 +43,7 @@ type AESCTRLayerBlockCipher struct {
 }
 
 type aesctrcryptor struct {
-	bc           *AESCTRLayerBlockCipher
-	outputReader io.Reader
+	bc *AESCTRLayerBlockCipher
 }
 
 // NewAESCTRLayerBlockCipher returns a new AES SIV block cipher of 256 or 512 bits
@@ -63,16 +63,12 @@ func (r *aesctrcryptor) Read(p []byte) (int, error) {
 		return 0, r.bc.err
 	}
 
-	for o = 0; o < len(p); {
-		n, err := r.bc.reader.Read(p[o:])
-		o += n
-		if err != nil {
-			if err == io.EOF {
-				r.bc.err = err
-				break
-			} else {
-				return 0, err
-			}
+	o, err := utils.FillBuffer(r.bc.reader, p)
+	if err != nil {
+		if err == io.EOF {
+			r.bc.err = err
+		} else {
+			return 0, err
 		}
 	}
 
@@ -179,7 +175,7 @@ func (bc *AESCTRLayerBlockCipher) Encrypt(plainDataReader io.Reader, opt LayerBl
 		lbco.Public.CipherOptions["hmac"] = bc.hmac.Sum(nil)
 		return lbco, nil
 	}
-	return &aesctrcryptor{bc, nil}, finalizer, nil
+	return &aesctrcryptor{bc}, finalizer, nil
 }
 
 // Decrypt takes in layer ciphertext data and returns the plaintext and relevant LayerBlockCipherOptions
@@ -189,5 +185,5 @@ func (bc *AESCTRLayerBlockCipher) Decrypt(encDataReader io.Reader, opt LayerBloc
 		return nil, LayerBlockCipherOptions{}, err
 	}
 
-	return &aesctrcryptor{bc, nil}, lbco, nil
+	return &aesctrcryptor{bc}, lbco, nil
 }
