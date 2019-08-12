@@ -78,14 +78,16 @@ func (r *aesctrcryptor) Read(p []byte) (int, error) {
 
 	if !r.bc.encrypt {
 		if _, err := r.bc.hmac.Write(p[:o]); err != nil {
-			return 0, errors.Wrapf(err, "could not write to hmac")
+			r.bc.err = errors.Wrapf(err, "could not write to hmac")
+			return 0, r.bc.err
 		}
 
 		if r.bc.err == io.EOF {
 			// Before we return EOF we let the HMAC comparison
 			// provide a verdict
 			if !hmac.Equal(r.bc.hmac.Sum(nil), r.bc.expHmac) {
-				return 0, fmt.Errorf("could not properly decrypt byte stream; exp hmac: '%x', actual hmac: '%s'", r.bc.expHmac, r.bc.hmac.Sum(nil))
+				r.bc.err = fmt.Errorf("could not properly decrypt byte stream; exp hmac: '%x', actual hmac: '%s'", r.bc.expHmac, r.bc.hmac.Sum(nil))
+				return 0, r.bc.err
 			}
 		}
 	}
@@ -94,7 +96,8 @@ func (r *aesctrcryptor) Read(p []byte) (int, error) {
 
 	if r.bc.encrypt {
 		if _, err := r.bc.hmac.Write(p[:o]); err != nil {
-			return 0, errors.Wrapf(err, "could not write to hmac")
+			r.bc.err = errors.Wrapf(err, "could not write to hmac")
+			return 0, r.bc.err
 		}
 
 		if r.bc.err == io.EOF {

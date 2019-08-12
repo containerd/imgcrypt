@@ -177,3 +177,58 @@ func TestBlockCipherAesCtrEncryptionInvalidKeyLength(t *testing.T) {
 		t.Fatal("Test should have failed due to invalid key length")
 	}
 }
+
+func TestBlockCipherAesCtrEncryptionInvalidHMAC(t *testing.T) {
+	var (
+		symKey = []byte("01234567890123456789012345678912")
+		opt    = LayerBlockCipherOptions{
+			Private: PrivateLayerBlockCipherOptions{
+				SymmetricKey: symKey,
+			},
+		}
+		layerData = []byte("this is some data")
+	)
+
+	bc, err := NewAESCTRLayerBlockCipher(256)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	layerDataReader := bytes.NewReader(layerData)
+
+	ciphertextReader, finalizer, err := bc.Encrypt(layerDataReader, opt)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Use a different instantiated object to indicate an invokation at a diff time
+	bc2, err := NewAESCTRLayerBlockCipher(256)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ciphertext := make([]byte, 1024)
+	encsize, err := ciphertextReader.Read(ciphertext)
+	if err != io.EOF {
+		t.Fatal("Expected EOF")
+	}
+	ciphertextTestReader := bytes.NewReader(ciphertext[:encsize])
+
+	lbco, err := finalizer()
+	if err != nil {
+		t.Fatal(err)
+	}
+	lbco.Public.CipherOptions["hmac"] = []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}
+
+	plaintextReader, _, err := bc2.Decrypt(ciphertextTestReader, lbco)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	plaintext := make([]byte, 1024)
+	// we will hit the error the first time
+	_, err = plaintextReader.Read(plaintext)
+	if err == nil || err == io.EOF {
+		t.Fatal("Read() should have failed due to wrong key")
+	}
+}
