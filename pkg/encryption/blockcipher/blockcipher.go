@@ -32,9 +32,9 @@ const (
 	CipherTypeOpt string          = "type"
 )
 
-// LayerBlockCipherOptions includes the information required to encrypt/decrypt
-// an image
-type LayerBlockCipherOptions struct {
+// PrivateLayerBlockCipherOptions includes the information required to encrypt/decrypt
+// an image which are sensitive and should not be in plaintext
+type PrivateLayerBlockCipherOptions struct {
 	// SymmetricKey represents the symmetric key used for encryption/decryption
 	// This field should be populated by Encrypt/Decrypt calls
 	SymmetricKey []byte `json:"symkey"`
@@ -48,9 +48,21 @@ type LayerBlockCipherOptions struct {
 	CipherOptions map[string][]byte `json:"cipheroptions"`
 }
 
-// SetHmac allows a client to pass in a function that the block cipher
-// passes the calculated HMAC to after encrypting the stream.
-type SetHmac func([]byte)
+// PublicLayerBlockCipherOptions includes the information required to encrypt/decrypt
+// an image which are public and can be deduplicated in plaintext across multiple
+// recipients
+type PublicLayerBlockCipherOptions struct {
+	// CipherOptions contains the cipher metadata used for encryption/decryption
+	// This field should be populated by Encrypt/Decrypt calls
+	CipherOptions map[string][]byte `json:"cipheroptions"`
+}
+
+// LayerBlockCipherOptions contains the public and private LayerBlockCipherOptions
+// required to encrypt/decrypt an image
+type LayerBlockCipherOptions struct {
+	Public  PublicLayerBlockCipherOptions
+	Private PrivateLayerBlockCipherOptions
+}
 
 // LayerBlockCipher returns a provider for encrypt/decrypt functionality
 // for handling the layer data for a specific algorithm
@@ -58,9 +70,9 @@ type LayerBlockCipher interface {
 	// GenerateKey creates a symmetric key
 	GenerateKey() ([]byte, error)
 	// Encrypt takes in layer data and returns the ciphertext and relevant LayerBlockCipherOptions
-	Encrypt(layerDataReader io.Reader, opt LayerBlockCipherOptions, setHmac SetHmac) (io.Reader, LayerBlockCipherOptions, error)
+	Encrypt(layerDataReader io.Reader, opt LayerBlockCipherOptions) (io.Reader, Finalizer, error)
 	// Decrypt takes in layer ciphertext data and returns the plaintext and relevant LayerBlockCipherOptions
-	Decrypt(layerDataReader io.Reader, opt LayerBlockCipherOptions, hmac []byte) (io.Reader, LayerBlockCipherOptions, error)
+	Decrypt(layerDataReader io.Reader, opt LayerBlockCipherOptions) (io.Reader, LayerBlockCipherOptions, error)
 }
 
 // LayerBlockCipherHandler is the handler for encrypt/decrypt for layers
@@ -68,34 +80,70 @@ type LayerBlockCipherHandler struct {
 	cipherMap map[LayerCipherType]LayerBlockCipher
 }
 
-// Encrypt is the handler for the layer decryption routine
-func (h *LayerBlockCipherHandler) Encrypt(plainDataReader io.Reader, typ LayerCipherType, setHmac SetHmac) (io.Reader, LayerBlockCipherOptions, error) {
+// Finalizer is called after data blobs are written, and returns the LayerBlockCipherOptions for the encrypted blob
+type Finalizer func() (LayerBlockCipherOptions, error)
 
+// GetOpt returns the value of the cipher option and if the option exists
+func (lbco LayerBlockCipherOptions) GetOpt(key string) (value []byte, ok bool) {
+	if v, ok := lbco.Public.CipherOptions[key]; ok {
+		return v, ok
+	} else if v, ok := lbco.Private.CipherOptions[key]; ok {
+		return v, ok
+	} else {
+		return nil, false
+	}
+}
+
+// SymmetricKey returns the value of the symmetric key for the cipher
+func (lbco LayerBlockCipherOptions) SymmetricKey() []byte {
+	return lbco.Private.SymmetricKey
+}
+
+// OriginalDigest returns the value of the original digest of the unencrypted blob
+func (lbco LayerBlockCipherOptions) OriginalDigest() digest.Digest {
+	return lbco.Private.Digest
+}
+
+func wrapFinalizerWithType(fin Finalizer, typ LayerCipherType) Finalizer {
+	return func() (LayerBlockCipherOptions, error) {
+		lbco, err := fin()
+		if err != nil {
+			return LayerBlockCipherOptions{}, err
+		}
+		lbco.Public.CipherOptions[CipherTypeOpt] = []byte(typ)
+		return lbco, err
+	}
+}
+
+// Encrypt is the handler for the layer decryption routine
+func (h *LayerBlockCipherHandler) Encrypt(plainDataReader io.Reader, typ LayerCipherType) (io.Reader, Finalizer, error) {
 	if c, ok := h.cipherMap[typ]; ok {
 		sk, err := c.GenerateKey()
 		if err != nil {
-			return nil, LayerBlockCipherOptions{}, err
+			return nil, nil, err
 		}
 		opt := LayerBlockCipherOptions{
-			SymmetricKey: sk,
+			Private: PrivateLayerBlockCipherOptions{
+				SymmetricKey: sk,
+			},
 		}
-		encDataReader, newopt, err := c.Encrypt(plainDataReader, opt, setHmac)
+		encDataReader, fin, err := c.Encrypt(plainDataReader, opt)
 		if err == nil {
-			newopt.CipherOptions[CipherTypeOpt] = []byte(typ)
+			fin = wrapFinalizerWithType(fin, typ)
 		}
-		return encDataReader, newopt, err
+		return encDataReader, fin, err
 	}
-	return nil, LayerBlockCipherOptions{}, errors.Errorf("unsupported cipher type: %s", typ)
+	return nil, nil, errors.Errorf("unsupported cipher type: %s", typ)
 }
 
 // Decrypt is the handler for the layer decryption routine
-func (h *LayerBlockCipherHandler) Decrypt(encDataReader io.Reader, opt LayerBlockCipherOptions, hmac []byte) (io.Reader, LayerBlockCipherOptions, error) {
-	typ, ok := opt.CipherOptions[CipherTypeOpt]
+func (h *LayerBlockCipherHandler) Decrypt(encDataReader io.Reader, opt LayerBlockCipherOptions) (io.Reader, LayerBlockCipherOptions, error) {
+	typ, ok := opt.GetOpt(CipherTypeOpt)
 	if !ok {
 		return nil, LayerBlockCipherOptions{}, errors.New("no cipher type provided")
 	}
 	if c, ok := h.cipherMap[LayerCipherType(typ)]; ok {
-		return c.Decrypt(encDataReader, opt, hmac)
+		return c.Decrypt(encDataReader, opt)
 	}
 	return nil, LayerBlockCipherOptions{}, errors.Errorf("unsupported cipher type: %s", typ)
 }

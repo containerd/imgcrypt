@@ -101,7 +101,19 @@ func TestEncryptLayer(t *testing.T) {
 
 	dataReader := bytes.NewReader(data)
 
-	encLayerReader, annotations, err := EncryptLayer(ec, dataReader, desc)
+	encLayerReader, encLayerFinalizer, err := EncryptLayer(ec, dataReader, desc)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	encLayer := make([]byte, 1024)
+	encsize, err := encLayerReader.Read(encLayer)
+	if err != io.EOF {
+		t.Fatal("Expected EOF")
+	}
+	encLayerReaderAt := bytes.NewReader(encLayer[:encsize])
+
+	annotations, err := encLayerFinalizer()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -113,13 +125,6 @@ func TestEncryptLayer(t *testing.T) {
 	newDesc := ocispec.Descriptor{
 		Annotations: annotations,
 	}
-
-	encLayer := make([]byte, 1024)
-	encsize, err := encLayerReader.Read(encLayer)
-	if err != io.EOF {
-		t.Fatal("Expected EOF")
-	}
-	encLayerReaderAt := bytes.NewReader(encLayer[:encsize])
 
 	decLayerReader, _, err := DecryptLayer(dc, encLayerReaderAt, newDesc, false)
 	if err != nil {
