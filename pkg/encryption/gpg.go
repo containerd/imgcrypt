@@ -25,7 +25,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/containerd/containerd/errdefs"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/ssh/terminal"
@@ -406,13 +405,13 @@ func GPGGetPrivateKey(descs []ocispec.Descriptor, gpgClient GPGClient, gpgVault 
 					}
 					break
 				} else {
-					return nil, nil, errors.Wrapf(errdefs.ErrInvalidArgument, "no GPGVault or GPGClient passed.")
+					return nil, nil, errors.New("no GPGVault or GPGClient passed")
 				}
 			}
 			if !found && len(b64pgpPackets) > 0 && mustFindKey {
 				ids := uint64ToStringArray("0x%x", keyIds)
 
-				return nil, nil, errors.Wrapf(errdefs.ErrNotFound, "missing key for decryption of layer %x of %s. Need one of the following keys: %s", desc.Digest, desc.Platform, strings.Join(ids, ", "))
+				return nil, nil, errors.Errorf("missing key for decryption of layer %x of %s. Need one of the following keys: %s", desc.Digest, desc.Platform, strings.Join(ids, ", "))
 			}
 		}
 	}

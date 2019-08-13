@@ -22,7 +22,6 @@ import (
 	"io"
 	"strings"
 
-	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/imgcrypt/pkg/encryption/blockcipher"
 	"github.com/containerd/imgcrypt/pkg/encryption/config"
 	"github.com/containerd/imgcrypt/pkg/encryption/keywrap"
@@ -85,7 +84,7 @@ func EncryptLayer(ec *config.EncryptConfig, encOrPlainLayerReader io.Reader, des
 	)
 
 	if ec == nil {
-		return nil, nil, errors.Wrapf(errdefs.ErrInvalidArgument, "EncryptConfig must not be nil")
+		return nil, nil, errors.New("EncryptConfig must not be nil")
 	}
 
 	for annotationsID := range keyWrapperAnnotations {
@@ -174,7 +173,7 @@ func preWrapKeys(keywrapper keywrap.KeyWrapper, ec *config.EncryptConfig, b64Ann
 // If unwrapOnly is set we will only try to decrypt the layer encryption key and return
 func DecryptLayer(dc *config.DecryptConfig, encLayerReader io.Reader, desc ocispec.Descriptor, unwrapOnly bool) (io.Reader, digest.Digest, error) {
 	if dc == nil {
-		return nil, "", errors.Wrapf(errdefs.ErrInvalidArgument, "DecryptConfig must not be nil")
+		return nil, "", errors.New("DecryptConfig must not be nil")
 	}
 	privOptsData, err := decryptLayerKeyOptsData(dc, desc)
 	if err != nil || unwrapOnly {

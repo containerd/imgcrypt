@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/containerd/containerd/errdefs"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/openpgp"
 	json "gopkg.in/square/go-jose.v2"
@@ -84,11 +83,11 @@ func ParsePrivateKey(privKey, privKeyPassword []byte, prefix string) (interface{
 			var der []byte
 			if x509.IsEncryptedPEMBlock(block) {
 				if privKeyPassword == nil {
-					return nil, errors.Wrapf(errdefs.ErrInvalidArgument, "%s: Missing password for encrypted private key", prefix)
+					return nil, errors.Errorf("%s: Missing password for encrypted private key", prefix)
 				}
 				der, err = x509.DecryptPEMBlock(block, privKeyPassword)
 				if err != nil {
-					return nil, errors.Wrapf(errdefs.ErrInvalidArgument, "%s: Wrong password: could not decrypt private key", prefix)
+					return nil, errors.Errorf("%s: Wrong password: could not decrypt private key", prefix)
 				}
 			} else {
 				der = block.Bytes
