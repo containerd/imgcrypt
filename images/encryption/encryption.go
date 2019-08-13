@@ -25,8 +25,8 @@ import (
 	"math/rand"
 
 	"github.com/containerd/containerd/images"
-	"github.com/containerd/imgcrypt/pkg/encryption"
-	encconfig "github.com/containerd/imgcrypt/pkg/encryption/config"
+	"github.com/containers/ocicrypt"
+	encconfig "github.com/containers/ocicrypt/config"
 
 	"github.com/containerd/containerd/content"
 	"github.com/containerd/containerd/errdefs"
@@ -71,14 +71,14 @@ func HasEncryptedLayer(ctx context.Context, layerInfos []ocispec.Descriptor) boo
 // encryptLayer encrypts the layer using the CryptoConfig and creates a new OCI Descriptor.
 // A call to this function may also only manipulate the wrapped keys list.
 // The caller is expected to store the returned encrypted data and OCI Descriptor
-func encryptLayer(cc *encconfig.CryptoConfig, dataReader content.ReaderAt, desc ocispec.Descriptor) (ocispec.Descriptor, io.Reader, encryption.EncryptLayerFinalizer, error) {
+func encryptLayer(cc *encconfig.CryptoConfig, dataReader content.ReaderAt, desc ocispec.Descriptor) (ocispec.Descriptor, io.Reader, ocicrypt.EncryptLayerFinalizer, error) {
 	var (
 		size int64
 		d    digest.Digest
 		err  error
 	)
 
-	encLayerReader, encLayerFinalizer, err := encryption.EncryptLayer(cc.EncryptConfig, encryption.ReaderFromReaderAt(dataReader), desc)
+	encLayerReader, encLayerFinalizer, err := ocicrypt.EncryptLayer(cc.EncryptConfig, ocicrypt.ReaderFromReaderAt(dataReader), desc)
 	if err != nil {
 		return ocispec.Descriptor{}, nil, nil, err
 	}
@@ -124,7 +124,7 @@ func encryptLayer(cc *encconfig.CryptoConfig, dataReader content.ReaderAt, desc 
 // DecryptLayer decrypts the layer using the DecryptConfig and creates a new OCI Descriptor.
 // The caller is expected to store the returned plain data and OCI Descriptor
 func DecryptLayer(dc *encconfig.DecryptConfig, dataReader io.Reader, desc ocispec.Descriptor, unwrapOnly bool) (ocispec.Descriptor, io.Reader, digest.Digest, error) {
-	resultReader, layerDigest, err := encryption.DecryptLayer(dc, dataReader, desc, unwrapOnly)
+	resultReader, layerDigest, err := ocicrypt.DecryptLayer(dc, dataReader, desc, unwrapOnly)
 	if err != nil || unwrapOnly {
 		return ocispec.Descriptor{}, nil, "", err
 	}
@@ -148,7 +148,7 @@ func DecryptLayer(dc *encconfig.DecryptConfig, dataReader io.Reader, desc ocispe
 // decryptLayer decrypts the layer using the CryptoConfig and creates a new OCI Descriptor.
 // The caller is expected to store the returned plain data and OCI Descriptor
 func decryptLayer(cc *encconfig.CryptoConfig, dataReader content.ReaderAt, desc ocispec.Descriptor, unwrapOnly bool) (ocispec.Descriptor, io.Reader, error) {
-	resultReader, d, err := encryption.DecryptLayer(cc.DecryptConfig, encryption.ReaderFromReaderAt(dataReader), desc, unwrapOnly)
+	resultReader, d, err := ocicrypt.DecryptLayer(cc.DecryptConfig, ocicrypt.ReaderFromReaderAt(dataReader), desc, unwrapOnly)
 	if err != nil || unwrapOnly {
 		return ocispec.Descriptor{}, nil, err
 	}
@@ -175,7 +175,7 @@ func cryptLayer(ctx context.Context, cs content.Store, desc ocispec.Descriptor, 
 	var (
 		resultReader      io.Reader
 		newDesc           ocispec.Descriptor
-		encLayerFinalizer encryption.EncryptLayerFinalizer
+		encLayerFinalizer ocicrypt.EncryptLayerFinalizer
 	)
 
 	dataReader, err := cs.ReaderAt(ctx, desc)
@@ -193,7 +193,7 @@ func cryptLayer(ctx context.Context, cs content.Store, desc ocispec.Descriptor, 
 		return ocispec.Descriptor{}, err
 	}
 
-	newDesc.Annotations = encryption.FilterOutAnnotations(desc.Annotations)
+	newDesc.Annotations = ocicrypt.FilterOutAnnotations(desc.Annotations)
 
 	// some operations, such as changing recipients, may not touch the layer at all
 	if resultReader != nil {

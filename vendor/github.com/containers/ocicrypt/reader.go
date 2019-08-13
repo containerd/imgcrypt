@@ -14,30 +14,27 @@
    limitations under the License.
 */
 
-package imgcrypt
+package ocicrypt
 
 import (
-	"github.com/containerd/typeurl"
-	encconfig "github.com/containers/ocicrypt/config"
-	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"io"
 )
 
-const (
-	PayloadURI = "io.containerd.ocicrypt.v1.Payload"
-)
-
-var PayloadToolIDs = []string{
-	"io.containerd.ocicrypt.decoder.v1.tar",
-	"io.containerd.ocicrypt.decoder.v1.tar.gzip",
+type readerAtReader struct {
+	r   io.ReaderAt
+	off int64
 }
 
-func init() {
-	typeurl.Register(&Payload{}, PayloadURI)
+// ReaderFromReaderAt takes an io.ReaderAt and returns an io.Reader
+func ReaderFromReaderAt(r io.ReaderAt) io.Reader {
+	return &readerAtReader{
+		r:   r,
+		off: 0,
+	}
 }
 
-// Payload holds data that the external layer decryption tool
-// needs for decrypting a layer
-type Payload struct {
-	DecryptConfig encconfig.DecryptConfig
-	Descriptor    ocispec.Descriptor
+func (rar *readerAtReader) Read(p []byte) (n int, err error) {
+	n, err = rar.r.ReadAt(p, rar.off)
+	rar.off += int64(n)
+	return n, err
 }

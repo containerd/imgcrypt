@@ -20,7 +20,7 @@ import (
 	"fmt"
 
 	"github.com/containerd/containerd/cmd/ctr/commands"
-	encconfig "github.com/containerd/imgcrypt/pkg/encryption/config"
+	encconfig "github.com/containers/ocicrypt/config"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 )
