@@ -23,12 +23,12 @@ import (
 	"github.com/containerd/console"
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/oci"
-	specs "github.com/opencontainers/runtime-spec/specs-go"
-	"github.com/sirupsen/logrus"
 	"github.com/containerd/imgcrypt"
 	"github.com/containerd/imgcrypt/cmd/ctr/commands"
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/images"
 	"github.com/containerd/imgcrypt/images/encryption"
+	specs "github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
 

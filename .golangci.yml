@@ -16,3 +16,5 @@ run:
   skip-dirs:
     - cmd/ctr/commands/run
     - cmd/ctr/commands/images
+    - cmd\\ctr\\commands\\run
+    - cmd\\ctr\\commands\\images
