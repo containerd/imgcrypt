@@ -26,7 +26,7 @@ import (
 	"hash"
 	"io"
 
-	"github.com/containerd/imgcrypt/pkg/encryption/utils"
+	"github.com/containers/ocicrypt/utils"
 	"github.com/pkg/errors"
 )
 

@@ -30,8 +30,8 @@ import (
 	encutils "github.com/containerd/containerd/pkg/encryption/utils"
 	"github.com/containerd/containerd/platforms"
 	imgenc "github.com/containerd/imgcrypt/images/encryption"
-	"github.com/containerd/imgcrypt/pkg/encryption"
-	encconfig "github.com/containerd/imgcrypt/pkg/encryption/config"
+	"github.com/containers/ocicrypt"
+	encconfig "github.com/containers/ocicrypt/config"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
@@ -210,8 +210,8 @@ func processPrivateKeyFiles(keyFilesAndPwds []string) ([][]byte, [][]byte, [][]b
 	return gpgSecretKeyRingFiles, gpgSecretKeyPasswords, privkeys, privkeysPasswords, nil
 }
 
-func createGPGClient(context *cli.Context) (encryption.GPGClient, error) {
-	return encryption.NewGPGClient(context.String("gpg-version"), context.String("gpg-homedir"))
+func createGPGClient(context *cli.Context) (ocicrypt.GPGClient, error) {
+	return ocicrypt.NewGPGClient(context.String("gpg-version"), context.String("gpg-homedir"))
 }
 
 func getGPGPrivateKeys(context *cli.Context, gpgSecretKeyRingFiles [][]byte, descs []ocispec.Descriptor, mustFindKey bool) (gpgPrivKeys [][]byte, gpgPrivKeysPwds [][]byte, err error) {
@@ -220,15 +220,15 @@ func getGPGPrivateKeys(context *cli.Context, gpgSecretKeyRingFiles [][]byte, des
 		return nil, nil, err
 	}
 
-	var gpgVault encryption.GPGVault
+	var gpgVault ocicrypt.GPGVault
 	if len(gpgSecretKeyRingFiles) > 0 {
-		gpgVault = encryption.NewGPGVault()
+		gpgVault = ocicrypt.NewGPGVault()
 		err = gpgVault.AddSecretKeyRingDataArray(gpgSecretKeyRingFiles)
 		if err != nil {
 			return nil, nil, err
 		}
 	}
-	return encryption.GPGGetPrivateKey(descs, gpgClient, gpgVault, mustFindKey)
+	return ocicrypt.GPGGetPrivateKey(descs, gpgClient, gpgVault, mustFindKey)
 }
 
 func createLayerFilter(client *containerd.Client, ctx gocontext.Context, desc ocispec.Descriptor, layers []int32, platformList []ocispec.Platform) (imgenc.LayerFilter, error) {

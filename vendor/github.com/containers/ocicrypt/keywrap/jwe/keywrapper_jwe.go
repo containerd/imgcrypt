@@ -19,9 +19,9 @@ package jwe
 import (
 	"crypto/ecdsa"
 
-	"github.com/containerd/imgcrypt/pkg/encryption/config"
-	"github.com/containerd/imgcrypt/pkg/encryption/keywrap"
-	"github.com/containerd/imgcrypt/pkg/encryption/utils"
+	"github.com/containers/ocicrypt/config"
+	"github.com/containers/ocicrypt/keywrap"
+	"github.com/containers/ocicrypt/utils"
 	"github.com/pkg/errors"
 	jose "gopkg.in/square/go-jose.v2"
 )

@@ -25,7 +25,7 @@ import (
 
 	"github.com/containerd/containerd/cmd/ctr/commands"
 	"github.com/containerd/containerd/platforms"
-	"github.com/containerd/imgcrypt/pkg/encryption"
+	"github.com/containers/ocicrypt"
 
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
@@ -81,7 +81,7 @@ var layerinfoCommand = cli.Command{
 			return nil
 		}
 
-		var gpgClient encryption.GPGClient
+		var gpgClient ocicrypt.GPGClient
 		if !context.Bool("n") {
 			// create a GPG client to resolve keyIds to names
 			gpgClient, _ = createGPGClient(context)
@@ -92,9 +92,9 @@ var layerinfoCommand = cli.Command{
 		for _, layer := range LayerInfos {
 			var recipients []string
 			var schemes []string
-			for scheme, wrappedKeys := range encryption.GetWrappedKeysMap(layer.Descriptor) {
+			for scheme, wrappedKeys := range ocicrypt.GetWrappedKeysMap(layer.Descriptor) {
 				schemes = append(schemes, scheme)
-				keywrapper := encryption.GetKeyWrapper(scheme)
+				keywrapper := ocicrypt.GetKeyWrapper(scheme)
 				if keywrapper != nil {
 					addRecipients, err := keywrapper.GetRecipients(wrappedKeys)
 					if err != nil {

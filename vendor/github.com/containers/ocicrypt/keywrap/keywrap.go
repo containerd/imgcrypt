@@ -17,7 +17,7 @@
 package keywrap
 
 import (
-	"github.com/containerd/imgcrypt/pkg/encryption/config"
+	"github.com/containers/ocicrypt/config"
 )
 
 // KeyWrapper is the interface used for wrapping keys using

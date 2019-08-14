@@ -14,7 +14,7 @@
    limitations under the License.
 */
 
-package encryption
+package ocicrypt
 
 import (
 	"encoding/base64"
@@ -22,12 +22,12 @@ import (
 	"io"
 	"strings"
 
-	"github.com/containerd/imgcrypt/pkg/encryption/blockcipher"
-	"github.com/containerd/imgcrypt/pkg/encryption/config"
-	"github.com/containerd/imgcrypt/pkg/encryption/keywrap"
-	"github.com/containerd/imgcrypt/pkg/encryption/keywrap/jwe"
-	"github.com/containerd/imgcrypt/pkg/encryption/keywrap/pgp"
-	"github.com/containerd/imgcrypt/pkg/encryption/keywrap/pkcs7"
+	"github.com/containers/ocicrypt/blockcipher"
+	"github.com/containers/ocicrypt/config"
+	"github.com/containers/ocicrypt/keywrap"
+	"github.com/containers/ocicrypt/keywrap/jwe"
+	"github.com/containers/ocicrypt/keywrap/pgp"
+	"github.com/containers/ocicrypt/keywrap/pkcs7"
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
