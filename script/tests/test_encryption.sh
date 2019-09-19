@@ -75,14 +75,13 @@ state = "${STATEDIR}"
   uid = 0
   gid = 0
 
-[[stream_processors]]
-	id = "io.containerd.ocicrypt.decoder.v1.tar.gzip"
+[stream_processors]
+    [stream_processors."io.containerd.ocicrypt.decoder.v1.tar.gzip"]
 	accepts = ["application/vnd.docker.image.rootfs.diff.tar.gzip+enc"]
 	returns = "application/vnd.docker.image.rootfs.diff.tar.gzip"
 	path = "${PWD}/ctd-decoder"
 
-[[stream_processors]]
-	id = "io.containerd.ocicrypt.decoder.v1.tar"
+    [stream_processors."io.containerd.ocicrypt.decoder.v1.tar"]
 	accepts = ["application/vnd.docker.image.rootfs.diff.tar+enc"]
 	returns = "application/vnd.docker.image.rootfs.diff.tar"
 	path = "${PWD}/ctd-decoder"
