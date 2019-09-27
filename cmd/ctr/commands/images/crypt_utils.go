@@ -27,11 +27,12 @@ import (
 
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/images"
-	encutils "github.com/containerd/containerd/pkg/encryption/utils"
+	encutils "github.com/containers/ocicrypt/utils"
 	"github.com/containerd/containerd/platforms"
 	imgenc "github.com/containerd/imgcrypt/images/encryption"
 	"github.com/containers/ocicrypt"
 	encconfig "github.com/containers/ocicrypt/config"
+	"github.com/containerd/imgcrypt/cmd/ctr/commands/img"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
@@ -232,7 +233,7 @@ func getGPGPrivateKeys(context *cli.Context, gpgSecretKeyRingFiles [][]byte, des
 }
 
 func createLayerFilter(client *containerd.Client, ctx gocontext.Context, desc ocispec.Descriptor, layers []int32, platformList []ocispec.Platform) (imgenc.LayerFilter, error) {
-	alldescs, err := images.GetImageLayerDescriptors(ctx, client.ContentStore(), desc)
+	alldescs, err := img.GetImageLayerDescriptors(ctx, client.ContentStore(), desc)
 	if err != nil {
 		return nil, err
 	}
@@ -331,7 +332,7 @@ func getImageLayerInfos(client *containerd.Client, ctx gocontext.Context, name s
 		return nil, nil, err
 	}
 
-	alldescs, err := images.GetImageLayerDescriptors(ctx, client.ContentStore(), image.Target)
+	alldescs, err := img.GetImageLayerDescriptors(ctx, client.ContentStore(), image.Target)
 	if err != nil {
 		return nil, nil, err
 	}

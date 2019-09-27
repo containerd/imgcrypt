@@ -26,6 +26,7 @@ import (
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/cio"
 	"github.com/containerd/containerd/cmd/ctr/commands"
+	"github.com/containerd/imgcrypt/cmd/ctr/commands/flags"
 	"github.com/containerd/containerd/cmd/ctr/commands/tasks"
 	"github.com/containerd/containerd/containers"
 	"github.com/containerd/containerd/oci"
@@ -119,7 +120,7 @@ var Command = cli.Command{
 			Name:  "platform",
 			Usage: "run image for specific platform",
 		},
-	}, append(platformRunFlags, append(commands.SnapshotterFlags, append(commands.ContainerFlags, commands.ImageDecryptionFlags...)...)...)...),
+	}, append(platformRunFlags, append(commands.SnapshotterFlags, append(commands.ContainerFlags, flags.ImageDecryptionFlags...)...)...)...),
 	Action: func(context *cli.Context) error {
 		var (
 			err error

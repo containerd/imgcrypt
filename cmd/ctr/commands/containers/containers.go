@@ -29,6 +29,7 @@ import (
 	"github.com/containerd/containerd/containers"
 	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/log"
+	"github.com/containerd/imgcrypt/cmd/ctr/commands/flags"
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/run"
 	"github.com/containerd/typeurl"
 	"github.com/pkg/errors"
@@ -55,7 +56,7 @@ var createCommand = cli.Command{
 	Name:      "create",
 	Usage:     "create container",
 	ArgsUsage: "[flags] Image|RootFS CONTAINER [COMMAND] [ARG...]",
-	Flags:     append(append(commands.SnapshotterFlags, commands.ContainerFlags...), commands.ImageDecryptionFlags...),
+	Flags:     append(append(commands.SnapshotterFlags, commands.ContainerFlags...), flags.ImageDecryptionFlags...),
 	Action: func(context *cli.Context) error {
 		var (
 			id     string

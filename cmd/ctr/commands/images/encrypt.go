@@ -23,6 +23,7 @@ import (
 	encconfig "github.com/containers/ocicrypt/config"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
+	"github.com/containerd/imgcrypt/cmd/ctr/commands/flags"
 )
 
 var encryptCommand = cli.Command{
@@ -56,7 +57,7 @@ var encryptCommand = cli.Command{
 	}, cli.StringSliceFlag{
 		Name:  "platform",
 		Usage: "For which platform to encrypt; by default encrytion is done for all platforms",
-	}), commands.ImageDecryptionFlags...),
+	}), flags.ImageDecryptionFlags...),
 	Action: func(context *cli.Context) error {
 		local := context.Args().First()
 		if local == "" {

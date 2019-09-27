@@ -1,5 +1,5 @@
 /*
-   Copyright The containerd Authors.
+   Copyright The ocicrypt Authors.
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -111,7 +111,7 @@ func (bc *AESCTRLayerBlockCipher) init(encrypt bool, reader io.Reader, opts Laye
 		err error
 	)
 
-	key := opts.SymmetricKey()
+	key := opts.Private.SymmetricKey
 	if len(key) != bc.keylen {
 		return LayerBlockCipherOptions{}, fmt.Errorf("invalid key length of %d bytes; need %d bytes", len(key), bc.keylen)
 	}
@@ -134,8 +134,12 @@ func (bc *AESCTRLayerBlockCipher) init(encrypt bool, reader io.Reader, opts Laye
 	bc.stream = cipher.NewCTR(block, nonce)
 	bc.err = nil
 	bc.hmac = hmac.New(sha256.New, key)
-	bc.expHmac, _ = opts.GetOpt("hmac")
+	bc.expHmac = opts.Public.Hmac
 	bc.doneEncrypting = false
+
+	if !encrypt && len(bc.expHmac) == 0 {
+		return LayerBlockCipherOptions{}, errors.New("HMAC is not provided for decryption process")
+	}
 
 	lbco := LayerBlockCipherOptions{
 		Private: PrivateLayerBlockCipherOptions{
@@ -172,7 +176,7 @@ func (bc *AESCTRLayerBlockCipher) Encrypt(plainDataReader io.Reader, opt LayerBl
 		if lbco.Public.CipherOptions == nil {
 			lbco.Public.CipherOptions = map[string][]byte{}
 		}
-		lbco.Public.CipherOptions["hmac"] = bc.hmac.Sum(nil)
+		lbco.Public.Hmac = bc.hmac.Sum(nil)
 		return lbco, nil
 	}
 	return &aesctrcryptor{bc}, finalizer, nil

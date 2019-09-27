@@ -20,7 +20,8 @@ import (
 	"fmt"
 
 	"github.com/containerd/containerd/cmd/ctr/commands"
-	imgenc "github.com/containerd/containerd/images/encryption"
+	imgenc "github.com/containerd/imgcrypt/images/encryption"
+	"github.com/containerd/imgcrypt/cmd/ctr/commands/flags"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 )
@@ -50,7 +51,7 @@ var decryptCommand = cli.Command{
 		Name:  "platform",
 		Usage: "For which platform to decrypt; by default decryption is done for all platforms",
 	},
-	), commands.ImageDecryptionFlags...),
+	), flags.ImageDecryptionFlags...),
 	Action: func(context *cli.Context) error {
 		local := context.Args().First()
 		if local == "" {

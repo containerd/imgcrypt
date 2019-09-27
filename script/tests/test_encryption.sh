@@ -77,13 +77,13 @@ state = "${STATEDIR}"
 
 [stream_processors]
     [stream_processors."io.containerd.ocicrypt.decoder.v1.tar.gzip"]
-	accepts = ["application/vnd.docker.image.rootfs.diff.tar.gzip+enc"]
-	returns = "application/vnd.docker.image.rootfs.diff.tar.gzip"
+	accepts = ["application/vnd.oci.image.layer.v1.tar+gzip+enc"]
+	returns = "application/vnd.oci.image.layer.v1.tar+gzip"
 	path = "${PWD}/ctd-decoder"
 
     [stream_processors."io.containerd.ocicrypt.decoder.v1.tar"]
-	accepts = ["application/vnd.docker.image.rootfs.diff.tar+enc"]
-	returns = "application/vnd.docker.image.rootfs.diff.tar"
+	accepts = ["application/vnd.oci.image.layer.v1.tar+enc"]
+	returns = "application/vnd.oci.image.layer.v1.tar"
 	path = "${PWD}/ctd-decoder"
 _EOF_
 	mkdir -p ${ROOTDIR}

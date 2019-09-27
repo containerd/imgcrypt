@@ -29,6 +29,7 @@ import (
 	"github.com/containerd/imgcrypt"
 	"github.com/containerd/imgcrypt/images/encryption"
 	"github.com/urfave/cli"
+	"github.com/containerd/imgcrypt/cmd/ctr/commands/flags"
 )
 
 var importCommand = cli.Command{
@@ -78,7 +79,7 @@ If foobar.tar contains an OCI ref named "latest" and anonymous ref "sha256:deadb
 			Name:  "compress-blobs",
 			Usage: "compress uncompressed blobs when creating manifest (Docker format only)",
 		},
-	}, commands.SnapshotterFlags...), commands.ImageDecryptionFlags...),
+	}, commands.SnapshotterFlags...), flags.ImageDecryptionFlags...),
 
 	Action: func(context *cli.Context) error {
 		var (

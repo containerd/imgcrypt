@@ -1,5 +1,5 @@
 /*
-   Copyright The containerd Authors.
+   Copyright The ocicrypt Authors.
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -28,8 +28,7 @@ type LayerCipherType string
 
 // TODO: Should be obtained from OCI spec once included
 const (
-	AES256CTR     LayerCipherType = "AES_256_CTR"
-	CipherTypeOpt string          = "type"
+	AES256CTR LayerCipherType = "AES_256_CTR_HMAC_SHA256"
 )
 
 // PrivateLayerBlockCipherOptions includes the information required to encrypt/decrypt
@@ -52,6 +51,13 @@ type PrivateLayerBlockCipherOptions struct {
 // an image which are public and can be deduplicated in plaintext across multiple
 // recipients
 type PublicLayerBlockCipherOptions struct {
+	// CipherType denotes the cipher type according to the list of OCI suppported
+	// cipher types.
+	CipherType LayerCipherType `json:"cipher"`
+
+	// Hmac contains the hmac string to help verify encryption
+	Hmac []byte `json:"hmac"`
+
 	// CipherOptions contains the cipher metadata used for encryption/decryption
 	// This field should be populated by Encrypt/Decrypt calls
 	CipherOptions map[string][]byte `json:"cipheroptions"`
@@ -94,23 +100,13 @@ func (lbco LayerBlockCipherOptions) GetOpt(key string) (value []byte, ok bool) {
 	}
 }
 
-// SymmetricKey returns the value of the symmetric key for the cipher
-func (lbco LayerBlockCipherOptions) SymmetricKey() []byte {
-	return lbco.Private.SymmetricKey
-}
-
-// OriginalDigest returns the value of the original digest of the unencrypted blob
-func (lbco LayerBlockCipherOptions) OriginalDigest() digest.Digest {
-	return lbco.Private.Digest
-}
-
 func wrapFinalizerWithType(fin Finalizer, typ LayerCipherType) Finalizer {
 	return func() (LayerBlockCipherOptions, error) {
 		lbco, err := fin()
 		if err != nil {
 			return LayerBlockCipherOptions{}, err
 		}
-		lbco.Public.CipherOptions[CipherTypeOpt] = []byte(typ)
+		lbco.Public.CipherType = typ
 		return lbco, err
 	}
 }
@@ -138,8 +134,8 @@ func (h *LayerBlockCipherHandler) Encrypt(plainDataReader io.Reader, typ LayerCi
 
 // Decrypt is the handler for the layer decryption routine
 func (h *LayerBlockCipherHandler) Decrypt(encDataReader io.Reader, opt LayerBlockCipherOptions) (io.Reader, LayerBlockCipherOptions, error) {
-	typ, ok := opt.GetOpt(CipherTypeOpt)
-	if !ok {
+	typ := opt.Public.CipherType
+	if typ == "" {
 		return nil, LayerBlockCipherOptions{}, errors.New("no cipher type provided")
 	}
 	if c, ok := h.cipherMap[LayerCipherType(typ)]; ok {

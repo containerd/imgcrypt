@@ -30,6 +30,7 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
+	"github.com/containerd/imgcrypt/cmd/ctr/commands/flags"
 )
 
 var pullCommand = cli.Command{
@@ -55,7 +56,7 @@ command. As part of this process, we do the following:
 			Name:  "all-platforms",
 			Usage: "pull content from all platforms",
 		},
-	), commands.ImageDecryptionFlags...,
+	), flags.ImageDecryptionFlags...,
 	),
 	Action: func(context *cli.Context) error {
 		var (
