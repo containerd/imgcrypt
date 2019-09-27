@@ -33,7 +33,7 @@ before_build:
 
 build_script:
   - bash.exe -elc "export PATH=/c/tools/mingw64/bin:/c/gopath/bin:$PATH;
-        GO111MODULE=on go get github.com/golangci/golangci-lint/cmd/golangci-lint@v1.15.0;
+        GO111MODULE=on go get github.com/golangci/golangci-lint/cmd/golangci-lint@v1.19.1;
         mingw32-make.exe check"
 
 test_script:
