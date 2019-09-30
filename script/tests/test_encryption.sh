@@ -77,12 +77,12 @@ state = "${STATEDIR}"
 
 [stream_processors]
     [stream_processors."io.containerd.ocicrypt.decoder.v1.tar.gzip"]
-	accepts = ["application/vnd.oci.image.layer.v1.tar+gzip+enc"]
+	accepts = ["application/vnd.oci.image.layer.v1.tar+gzip+encrypted"]
 	returns = "application/vnd.oci.image.layer.v1.tar+gzip"
 	path = "${PWD}/ctd-decoder"
 
     [stream_processors."io.containerd.ocicrypt.decoder.v1.tar"]
-	accepts = ["application/vnd.oci.image.layer.v1.tar+enc"]
+	accepts = ["application/vnd.oci.image.layer.v1.tar+encrypted"]
 	returns = "application/vnd.oci.image.layer.v1.tar"
 	path = "${PWD}/ctd-decoder"
 _EOF_
