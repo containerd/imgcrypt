@@ -26,6 +26,7 @@ if [ -z ${CONTAINERD} ] || [ ! -x ${CONTAINERD} ]; then
 fi
 
 ROOT=$(dirname "$0")/../../
+BIN=${ROOT}/bin
 
 ALPINE=docker.io/library/alpine:latest
 ALPINE_ENC=docker.io/library/alpine:enc
@@ -63,7 +64,7 @@ STATEDIR=${WORKDIR}/run/containerd
 LOGFILE=${WORKDIR}/log
 PIDFILE=${WORKDIR}/containerd.pid
 
-CTR="${ROOT}/ctr -a ${CONTAINERD_SOCKET}"
+CTR="${BIN}/ctr-enc -a ${CONTAINERD_SOCKET}"
 
 startContainerd() {
 	cat <<_EOF_ > ${CONFIG_TOML}
@@ -79,12 +80,12 @@ state = "${STATEDIR}"
     [stream_processors."io.containerd.ocicrypt.decoder.v1.tar.gzip"]
 	accepts = ["application/vnd.oci.image.layer.v1.tar+gzip+encrypted"]
 	returns = "application/vnd.oci.image.layer.v1.tar+gzip"
-	path = "${PWD}/ctd-decoder"
+	path = "${BIN}/ctd-decoder"
 
     [stream_processors."io.containerd.ocicrypt.decoder.v1.tar"]
 	accepts = ["application/vnd.oci.image.layer.v1.tar+encrypted"]
 	returns = "application/vnd.oci.image.layer.v1.tar"
-	path = "${PWD}/ctd-decoder"
+	path = "${BIN}/ctd-decoder"
 _EOF_
 	mkdir -p ${ROOTDIR}
 	mkdir -p ${STATEDIR}

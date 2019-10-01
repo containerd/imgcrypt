@@ -12,25 +12,45 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-.PHONY: check build decoder
 
-all: build decoder
+# Base path used to install.
+DESTDIR ?= /usr/local
 
-build: decoder ctr
+COMMANDS=ctd-decoder ctr-enc
+
+BINARIES=$(addprefix bin/,$(COMMANDS))
+
+.PHONY: check build ctd-decoder
+
+all: build
+
+build: $(BINARIES)
 
 FORCE:
 
-decoder: FORCE
-	go build -v ./cmd/ctd-decoder/
+bin/ctd-decoder: cmd/ctd-decoder FORCE
+	go build -o $@ -v ./cmd/ctd-decoder/
 
-ctr: FORCE
-	go build -v ./cmd/ctr/
+bin/ctr-enc: cmd/ctr FORCE
+	go build -o $@ -v ./cmd/ctr/
 
 check:
-	golangci-lint run
+	@echo "$@"
+	@golangci-lint run
+
+install:
+	@echo "$@"
+	@mkdir -p $(DESTDIR)/bin
+	@install $(BINARIES) $(DESTDIR)/bin
+
+uninstall:
+	@echo "$@"
+	@rm -f $(addprefix $(DESTDIR)/bin/,$(notdir $(BINARIES)))
 
 clean:
-	rm -f ctd-decoder ctr
+	@echo "$@"
+	@rm -f $(BINARIES)
 
 test:
-	go test ./...
+	@echo "$@"
+	@go test ./...
