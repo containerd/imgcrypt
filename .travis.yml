@@ -23,6 +23,8 @@ before_install:
   - |
     pushd ..
     git clone https://github.com/containerd/containerd.git
+    git clone https://github.com/containerd/project
+    go get -u github.com/vbatts/git-validation
     pushd containerd
     make -j$(nproc)
     sudo make install
@@ -33,8 +35,12 @@ before_install:
 install:
   - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin v1.19.1
   - sudo PATH=$PATH GOPATH=$GOPATH script/setup/install-runc
+  - go get -u github.com/vbatts/git-validation
+  - go get -u github.com/kunalkushwaha/ltag
 
 script:
+  - DCO_VERBOSITY=-q ../project/script/validate/dco
+  - ../project/script/validate/fileheader ../project/
   - make check
   - make test
   - make
