@@ -1,5 +1,7 @@
 # imgcrypt image encryption library and command line lool
 
+Project `imgcrypt` is a non-core subproject of containerd.
+
 The `imgcrypt` library provides API exensions for containerd to support encryted container images and implements
 the `ctd-decoder` command line tool for use by containerd to decrypt encrypted container images. An extended version
 of containerd's `ctr` tool (`ctr-enc') with support for encrypting and decrypting container images is also provided.
@@ -91,10 +93,10 @@ Hello World!
 
 ## Project details
 
-**imgcrypt** is a containerd sub-project, licensed under the [Apache 2.0 license](./LICENSE).
+**imgcrypt** is a non-core containerd sub-project, licensed under the [Apache 2.0 license](./LICENSE).
 As a containerd sub-project, you will find the:
  * [Project governance](https://github.com/containerd/project/blob/master/GOVERNANCE.md),
- * [Maintainers](https://github.com/containerd/project/blob/master/MAINTAINERS),
+ * [Maintainers](MAINTAINERS.md),
  * and [Contributing guidelines](https://github.com/containerd/project/blob/master/CONTRIBUTING.md)
 
 information in our [`containerd/project`](https://github.com/containerd/project) repository.
