@@ -55,19 +55,23 @@ cleanup() {
 	if [ -n "${WORKDIR}" ]; then
 		sudo rm -rf ${WORKDIR}
 	fi
+	echo "Clean up complete"
+	echo
 }
-WORKDIR=$(mktemp -d)
-CONFIG_TOML=${WORKDIR}/config.toml
-CONTAINERD_SOCKET=${WORKDIR}/containerd.socket
-ROOTDIR=${WORKDIR}/var/lib/containerd
-STATEDIR=${WORKDIR}/run/containerd
-LOGFILE=${WORKDIR}/log
-PIDFILE=${WORKDIR}/containerd.pid
 
-CTR="${BIN}/ctr-enc -a ${CONTAINERD_SOCKET}"
+setup() {
+	WORKDIR=$(mktemp -d)
+	CONFIG_TOML=${WORKDIR}/config.toml
+	CONTAINERD_SOCKET=${WORKDIR}/containerd.socket
+	ROOTDIR=${WORKDIR}/var/lib/containerd
+	STATEDIR=${WORKDIR}/run/containerd
+	LOGFILE=${WORKDIR}/log
+	PIDFILE=${WORKDIR}/containerd.pid
+	CTR="${BIN}/ctr-enc -a ${CONTAINERD_SOCKET}"
+}
 
 startContainerd() {
-	cat <<_EOF_ > ${CONFIG_TOML}
+	cat <<_EOF_ >${CONFIG_TOML}
 disable_plugins = ["cri"]
 root = "${ROOTDIR}"
 state = "${STATEDIR}"
@@ -102,10 +106,49 @@ _EOF_
 	sudo chmod 777 ${CONTAINERD_SOCKET}
 }
 
+startContainerdLocalKeys() {
+	LOCAL_KEYS_PATH="${WORKDIR}/keys"
+	mkdir -p ${LOCAL_KEYS_PATH}
+	cat <<_EOF_ >${CONFIG_TOML}
+disable_plugins = ["cri"]
+root = "${ROOTDIR}"
+state = "${STATEDIR}"
+[grpc]
+  address = "${CONTAINERD_SOCKET}"
+  uid = 0
+  gid = 0
+
+[stream_processors]
+    [stream_processors."io.containerd.ocicrypt.decoder.v1.tar.gzip"]
+	accepts = ["application/vnd.oci.image.layer.v1.tar+gzip+encrypted"]
+	returns = "application/vnd.oci.image.layer.v1.tar+gzip"
+	path = "${BIN}/ctd-decoder"
+	args = ["--decryption-keys-path", "${LOCAL_KEYS_PATH}"]
+
+    [stream_processors."io.containerd.ocicrypt.decoder.v1.tar"]
+	accepts = ["application/vnd.oci.image.layer.v1.tar+encrypted"]
+	returns = "application/vnd.oci.image.layer.v1.tar"
+	path = "${BIN}/ctd-decoder"
+	args = ["--decryption-keys-path", "${LOCAL_KEYS_PATH}"]
+_EOF_
+	mkdir -p ${ROOTDIR}
+	mkdir -p ${STATEDIR}
+	sudo bash -c "${CONTAINERD} -c ${CONFIG_TOML} &>${LOGFILE} & echo \$! > ${PIDFILE}; wait" &
+	sleep 1
+	CONTAINERD_PID="$(cat ${PIDFILE})"
+	sudo kill -0 ${CONTAINERD_PID}
+	if [ $? -ne 0 ]; then
+		echo "Could not start containerd"
+		cat ${CONFIG_TOML}
+		cat ${LOGFILE}
+		exit 1
+	fi
+	sudo chmod 777 ${CONTAINERD_SOCKET}
+}
+
 failExit() {
 	local rc=$1
 	local msg="$2"
-
 	if [ $rc -ne 0 ]; then
 		echo -e "Error: $msg" >&2
 		echo >&2
@@ -159,12 +202,12 @@ testPGP() {
 	LAYER_INFO_NGINX_ENC="$($CTR images layerinfo ${NGINX_ENC})"
 	failExit $? "Image layerinfo on PGP encrypted image failed"
 
-	diff <(echo "${LAYER_INFO_NGINX}"     | gawk '{print $3}') \
-	     <(echo "${LAYER_INFO_NGINX_ENC}" | gawk '{print $3}' )
+	diff <(echo "${LAYER_INFO_NGINX}" | gawk '{print $3}') \
+		<(echo "${LAYER_INFO_NGINX_ENC}" | gawk '{print $3}')
 	failExit $? "Image layerinfo on PGP encrypted image shows differences in architectures"
 
 	diff <(echo "${LAYER_INFO_NGINX_ENC}" | gawk '{print $5}' | sort | uniq | tr -d '\n') \
-	     <(echo -n "ENCRYPTIONpgp" )
+		<(echo -n "ENCRYPTIONpgp")
 	failExit $? "Image layerinfo on PGP encrypted image shows unexpected encryption"
 
 	$CTR images decrypt \
@@ -196,12 +239,12 @@ testPGP() {
 	LAYER_INFO_ALPINE_ENC="$($CTR images layerinfo ${ALPINE_ENC})"
 	failExit $? "Image layerinfo on PGP encrypted image failed"
 
-	diff <(echo "${LAYER_INFO_ALPINE}"     | gawk '{print $3}') \
-	     <(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $3}' )
+	diff <(echo "${LAYER_INFO_ALPINE}" | gawk '{print $3}') \
+		<(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $3}')
 	failExit $? "Image layerinfo on PGP encrypted image shows differences in architectures"
 
 	diff <(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $5}' | sort | uniq | tr -d '\n') \
-	     <(echo -n "ENCRYPTIONpgp" )
+		<(echo -n "ENCRYPTIONpgp")
 	failExit $? "Image layerinfo on PGP encrypted image shows unexpected encryption"
 
 	$CTR images decrypt \
@@ -252,7 +295,7 @@ testPGP() {
 	failExit $? "Image layerinfo on imported image failed (PGP)"
 
 	diff <(echo "${LAYER_INFO_ALPINE_ENC_NEW}" | gawk '{print $3}') \
-	     <(echo "${LAYER_INFO_ALPINE_ENC}"     | gawk '{print $3}' )
+		<(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $3}')
 	failExit $? "Image layerinfo on PGP encrypted image shows differences in architectures"
 
 	diff <(echo "${LAYER_INFO_ALPINE_ENC_NEW}") <(echo "${LAYER_INFO_ALPINE_ENC}")
@@ -269,19 +312,19 @@ testPGP() {
 	LAYER_INFO_ALPINE_NEW="$($CTR images layerinfo ${ALPINE})"
 	failExit $? "Image layerinfo on imported image failed (PGP)"
 
-	diff <(echo "${LAYER_INFO_ALPINE}"     | gawk '{print $3}') \
-	     <(echo "${LAYER_INFO_ALPINE_NEW}" | gawk '{print $3}' )
+	diff <(echo "${LAYER_INFO_ALPINE}" | gawk '{print $3}') \
+		<(echo "${LAYER_INFO_ALPINE_NEW}" | gawk '{print $3}')
 	failExit $? "Image layerinfo on plain ${ALPINE} image shows differences in architectures"
 
 	echo "PASS: Export and import of PGP encrypted image"
 	echo
 	echo "Testing creation of container from encrypted image"
 	MSG=$($CTR container rm testcontainer1 2>&1)
-	MSG=$($CTR snapshot  rm testcontainer1 2>&1)
+	MSG=$($CTR snapshot rm testcontainer1 2>&1)
 	MSG=$(sudo $CTR container create ${ALPINE_ENC} testcontainer1 2>&1)
 	if [ $? -eq 0 ]; then
 		MSG=$($CTR container rm testcontainer1 2>&1)
-		MSG=$($CTR snapshot  rm testcontainer1 2>&1)
+		MSG=$($CTR snapshot rm testcontainer1 2>&1)
 		failExit 1 "Should not have been able to create a container from encrypted image without passing keys"
 	fi
 	MSG=$($CTR snapshot rm testcontainer1 2>&1)
@@ -292,16 +335,16 @@ testPGP() {
 		${ALPINE_ENC} testcontainer1 2>&1")
 	failExit $? "Should have been able to create a container from encrypted image when passing keys\n${MSG}"
 	MSG=$($CTR container rm testcontainer1 2>&1)
-	MSG=$($CTR snapshot  rm testcontainer1 2>&1)
+	MSG=$($CTR snapshot rm testcontainer1 2>&1)
 
 	MSG=$(sudo bash -c "$CTR run \
 		--rm \
 		${ALPINE_ENC} testcontainer1 echo 'Hello world'" 2>&1)
 	if [ $? -eq 0 ]; then
-		MSG=$($CTR snapshot  rm testcontainer1 2>&1)
+		MSG=$($CTR snapshot rm testcontainer1 2>&1)
 		failExit 1 "Should not have been able to run a container from encrypted image without passing keys"
 	fi
-	MSG=$($CTR snapshot  rm testcontainer1 2>&1)
+	MSG=$($CTR snapshot rm testcontainer1 2>&1)
 	MSG=$(sudo bash -c "$CTR run \
 		--gpg-homedir ${GPGHOMEDIR} \
 		--gpg-version 2 \
@@ -323,19 +366,19 @@ testPGP() {
 	LAYER_INFO_ALPINE_ENC="$($CTR images layerinfo -n ${ALPINE_ENC})"
 	failExit $? "Image layerinfo on PGP encrypted image failed"
 
-	diff <(echo "${LAYER_INFO_ALPINE}"     | gawk '{print $3}') \
-	     <(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $3}' )
+	diff <(echo "${LAYER_INFO_ALPINE}" | gawk '{print $3}') \
+		<(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $3}')
 	failExit $? "Image layerinfo on PGP encrypted image shows differences in architectures"
 
 	diff <(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $6 $7}' | sort | uniq | tr -d '\n') \
-	     <(echo -n "0x6d6d5017a3752cbd,0xb0310f009d3abc2fRECIPIENTS" )
+		<(echo -n "0x6d6d5017a3752cbd,0xb0310f009d3abc2fRECIPIENTS")
 	failExit $? "Image layerinfo on PGP encrypted image shows unexpected recipients"
 
 	LAYER_INFO_ALPINE_ENC="$($CTR images layerinfo --gpg-homedir ${GPGHOMEDIR} --gpg-version 2 ${ALPINE_ENC})"
 	failExit $? "Image layerinfo on PGP encrypted image failed"
 
 	diff <(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $6 $7}' | sort | uniq | tr -d '\n') \
-	     <(echo -n "RECIPIENTStestkey1@key.org,testkey2@key.org" )
+		<(echo -n "RECIPIENTStestkey1@key.org,testkey2@key.org")
 	failExit $? "Image layerinfo on PGP encrypted image shows unexpected recipients"
 
 	for privkey in ${GPGTESTKEY1} ${GPGTESTKEY2}; do
@@ -433,8 +476,8 @@ createJWEKeys() {
 	fi
 	failExit $rc "Could not write EC public key in DER format\n$MSG"
 
-	echo "${JWKTESTKEY1}" > ${PRIVKEYJWK}
-	echo "${JWKTESTPUBKEY1}" > ${PUBKEYJWK}
+	echo "${JWKTESTKEY1}" >${PRIVKEYJWK}
+	echo "${JWKTESTPUBKEY1}" >${PUBKEYJWK}
 }
 
 testJWE() {
@@ -451,12 +494,12 @@ testJWE() {
 		LAYER_INFO_ALPINE_ENC="$($CTR images layerinfo ${ALPINE_ENC})"
 		failExit $? "Image layerinfo on JWE encrypted image failed; public key: ${recipient}"
 
-		diff <(echo "${LAYER_INFO_ALPINE}"     | gawk '{print $3}') \
-		     <(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $3}' )
+		diff <(echo "${LAYER_INFO_ALPINE}" | gawk '{print $3}') \
+			<(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $3}')
 		failExit $? "Image layerinfo on JWE encrypted image shows differences in architectures"
 
 		diff <(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $5}' | sort | uniq | tr -d '\n') \
-		     <(echo -n "ENCRYPTIONjwe" )
+			<(echo -n "ENCRYPTIONjwe")
 		failExit $? "Image layerinfo on JWE encrypted image shows unexpected encryption"
 
 		for privkey in ${PRIVKEYPEM} ${PRIVKEYDER} ${PRIVKEYPK8PEM} ${PRIVKEYPK8DER}; do
@@ -533,12 +576,12 @@ testJWE() {
 		LAYER_INFO_ALPINE_ENC="$($CTR images layerinfo ${ALPINE_ENC})"
 		failExit $? "Image layerinfo on JWE encrypted image failed; public key: ${recipient}"
 
-		diff <(echo "${LAYER_INFO_ALPINE}"     | gawk '{print $3}') \
-		     <(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $3}' )
+		diff <(echo "${LAYER_INFO_ALPINE}" | gawk '{print $3}') \
+			<(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $3}')
 		failExit $? "Image layerinfo on JWE encrypted image shows differences in architectures"
 
 		diff <(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $5}' | sort | uniq | tr -d '\n') \
-		     <(echo -n "ENCRYPTIONjwe" )
+			<(echo -n "ENCRYPTIONjwe")
 		failExit $? "Image layerinfo on JWE encrypted image shows unexpected encryption"
 
 		for privkey in ${PRIVKEYJWK}; do
@@ -563,6 +606,67 @@ testJWE() {
 	echo "PASS: JWE encryption with a JWK"
 
 	$CTR images rm --sync ${ALPINE_DEC} ${ALPINE_ENC} &>/dev/null
+}
+
+testLocalKeys() {
+	createJWEKeys
+
+	echo "Testing JWE type of encryption with local unpack keys"
+
+	# Remove original images
+	$CTR images rm --sync ${ALPINE_ENC} ${ALPINE_DEC} ${NGINX_ENC} ${NGINX_DEC} &>/dev/null
+
+	local recipient
+	recipient=jwe:${PUBKEYPEM}
+	$CTR images encrypt \
+		--recipient ${recipient} \
+		${ALPINE} ${ALPINE_ENC}
+	failExit $? "Image encryption with JWE failed; public key: ${recipient}"
+
+	LAYER_INFO_ALPINE_ENC="$($CTR images layerinfo ${ALPINE_ENC})"
+	failExit $? "Image layerinfo on JWE encrypted image failed; public key: ${recipient}"
+
+	diff <(echo "${LAYER_INFO_ALPINE}" | gawk '{print $3}') \
+		<(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $3}')
+	failExit $? "Image layerinfo on JWE encrypted image shows differences in architectures"
+
+	diff <(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $5}' | sort | uniq | tr -d '\n') \
+		<(echo -n "ENCRYPTIONjwe")
+	failExit $? "Image layerinfo on JWE encrypted image shows unexpected encryption"
+
+	# Remove snapshots to force the decryption with unpacker
+	for i in $($CTR snapshots ls | tail -n +2 | awk '{print $1}'); do
+		MSG=$($CTR snapshots rm $i 2>&1)
+	done
+
+	MSG=$($CTR container rm testcontainer1 2>&1)
+	MSG=$($CTR snapshot rm testcontainer1 2>&1)
+	MSG=$(sudo $CTR container create ${ALPINE_ENC} testcontainer1 2>&1)
+	if [ $? -eq 0 ]; then
+		MSG=$($CTR container rm testcontainer1 2>&1)
+		MSG=$($CTR snapshot rm testcontainer1 2>&1)
+		failExit 1 "Should not have been able to create a container from encrypted image without local keys existing"
+	fi
+	MSG=$($CTR snapshot rm testcontainer1 2>&1)
+
+	for privkey in ${PRIVKEYPEM} ${ECPRIVKEYDER}; do
+		cp $privkey ${LOCAL_KEYS_PATH}/.
+	done
+
+	echo "Testing creation of container from encrypted image with local keys"
+	MSG=$($CTR container rm testcontainer1 2>&1)
+	MSG=$($CTR snapshot rm testcontainer1 2>&1)
+	MSG=$(sudo $CTR container create ${ALPINE_ENC} --skip-decrypt-auth --key ${PRIVKEY2PEM} testcontainer1 2>&1)
+
+	failExit $? "Should have been able to create a container from encrypted image when local keys exists\n${MSG}"
+	MSG=$($CTR container rm testcontainer1 2>&1)
+	MSG=$($CTR snapshot rm testcontainer1 2>&1)
+
+	$CTR images rm --sync ${ALPINE_ENC} &>/dev/null
+	echo "Encryption with ${recipient} and decrypting with local unpack keys worked"
+
+	echo "PASS: JWE Type of encryption with local unpack keys"
+	echo
 }
 
 setupPKCS7() {
@@ -623,12 +727,12 @@ testPKCS7() {
 		LAYER_INFO_ALPINE_ENC="$($CTR images layerinfo ${ALPINE_ENC})"
 		failExit $? "Image layerinfo on PKCS7 encrypted image failed; public key: ${recipient}"
 
-		diff <(echo "${LAYER_INFO_ALPINE}"     | gawk '{print $3}') \
-		     <(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $3}' )
+		diff <(echo "${LAYER_INFO_ALPINE}" | gawk '{print $3}') \
+			<(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $3}')
 		failExit $? "Image layerinfo on PKCS7 encrypted image shows differences in architectures"
 
 		diff <(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $5}' | sort | uniq | tr -d '\n') \
-		     <(echo -n "ENCRYPTIONpkcs7" )
+			<(echo -n "ENCRYPTIONpkcs7")
 		failExit $? "Image layerinfo on PKCS7 encrypted image shows unexpected encryption"
 
 		for privKeyAndRecipient in "${CLIENTCERTKEY}:${CLIENTCERT}"; do
@@ -716,12 +820,12 @@ testPGPandJWEandPKCS7() {
 	LAYER_INFO_ALPINE_ENC="$($CTR images layerinfo ${ALPINE_ENC})"
 	failExit $? "Image layerinfo on multi-recipient encrypted image failed; public key: ${recipient}"
 
-	diff <(echo "${LAYER_INFO_ALPINE}"     | gawk '{print $3}') \
-	     <(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $3}' )
+	diff <(echo "${LAYER_INFO_ALPINE}" | gawk '{print $3}') \
+		<(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $3}')
 	failExit $? "Image layerinfo on multi-recipient encrypted image shows differences in architectures"
 
 	diff <(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $5}' | sort | uniq | tr -d '\n') \
-	     <(echo -n "ENCRYPTIONjwe,pgp,pkcs7" )
+		<(echo -n "ENCRYPTIONjwe,pgp,pkcs7")
 
 	$CTR images rm --sync ${ALPINE_ENC} &>/dev/null
 	echo "Encryption to multiple different types of recipients worked."
@@ -747,16 +851,16 @@ testPGPandJWEandPKCS7() {
 		LAYER_INFO_ALPINE_ENC="$($CTR images layerinfo ${ALPINE_ENC})"
 		failExit $? "Image layerinfo on multi-recipient encrypted image failed; public key: ${recipient}"
 
-		diff <(echo "${LAYER_INFO_ALPINE}"     | gawk '{print $3}') \
-		     <(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $3}' )
+		diff <(echo "${LAYER_INFO_ALPINE}" | gawk '{print $3}') \
+			<(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $3}')
 		failExit $? "Image layerinfo on multi-recipient encrypted image shows differences in architectures"
 
 		if [ $ctr -lt 3 ]; then
 			diff <(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $5}' | sort | uniq | tr -d '\n') \
-			     <(echo -n "ENCRYPTIONjwe,pgp" )
+				<(echo -n "ENCRYPTIONjwe,pgp")
 		else
 			diff <(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $5}' | sort | uniq | tr -d '\n') \
-			     <(echo -n "ENCRYPTIONjwe,pgp,pkcs7" )
+				<(echo -n "ENCRYPTIONjwe,pgp,pkcs7")
 		fi
 		failExit $? "Image layerinfo on JWE encrypted image shows unexpected encryption (ctr=$ctr)"
 		ctr=$((ctr + 1))
@@ -839,31 +943,44 @@ testPGPandJWEandPKCS7() {
 		LAYER_INFO_ALPINE_ENC="$($CTR images layerinfo ${ALPINE_ENC})"
 		failExit $? "Image layerinfo on JWE encrypted image failed; public key: ${recipient}"
 
-		diff <(echo "${LAYER_INFO_ALPINE}"     | gawk '{print $3}') \
-		     <(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $3}' )
+		diff <(echo "${LAYER_INFO_ALPINE}" | gawk '{print $3}') \
+			<(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $3}')
 		failExit $? "Image layerinfo on JWE encrypted image shows differences in architectures"
 
 		if [ $ctr -lt 3 ]; then
 			diff <(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $5}' | sort | uniq | tr -d '\n') \
-			     <(echo -n "ENCRYPTIONjwe,pgp" )
+				<(echo -n "ENCRYPTIONjwe,pgp")
 		else
 			diff <(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $5}' | sort | uniq | tr -d '\n') \
-			     <(echo -n "ENCRYPTIONjwe,pgp,pkcs7" )
+				<(echo -n "ENCRYPTIONjwe,pgp,pkcs7")
 		fi
 		failExit $? "Image layerinfo on JWE encrypted image shows unexpected encryption"
 		ctr=$((ctr + 1))
 	done
 
 	echo "PASS: Test with JWE, PGP, and PKCS7 recipients"
+	echo
 
 	$CTR images rm --sync ${ALPINE_DEC} ${ALPINE_ENC} &>/dev/null
 }
 
+# Test containerd with flow where keys are passed in via containerd API
+setup
 startContainerd
 pullImages
 testPGP
 testJWE
 testPKCS7
 testPGPandJWEandPKCS7
+cleanup
+
+# Test containerd with flow where keys are in local directory
+echo "Testing with containerd + local keys files"
+echo
+setup
+startContainerdLocalKeys
+pullImages
+testLocalKeys
+cleanup
 
 exit 0

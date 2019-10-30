@@ -27,22 +27,57 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
+	"github.com/urfave/cli"
+)
+
+var (
+	Usage = "ctd-decoder is used as a call-out from containerd content stream plugins"
 )
 
 func main() {
-	if err := decrypt(); err != nil {
+	app := cli.NewApp()
+	app.Name = "ctd-decoder"
+	app.Usage = Usage
+	app.Action = run
+	app.Flags = []cli.Flag{
+		cli.StringFlag{
+			Name:  "decryption-keys-path",
+			Usage: "Path to load decryption keys from. (optional)",
+		},
+	}
+	if err := app.Run(os.Args); err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
 		os.Exit(1)
 	}
 }
 
-func decrypt() error {
+func run(ctx *cli.Context) error {
+	if err := decrypt(ctx); err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		os.Exit(1)
+		return err
+	}
+	return nil
+}
+
+func decrypt(ctx *cli.Context) error {
 	payload, err := getPayload()
 	if err != nil {
 		return err
 	}
 
-	_, r, _, err := encryption.DecryptLayer(&payload.DecryptConfig, os.Stdin, payload.Descriptor, false)
+	decCc := &payload.DecryptConfig
+
+	// TODO: If decryption key path is set, get additional keys to augment payload keys
+	if ctx.GlobalIsSet("decryption-keys-path") {
+		keyPathCc, err := getDecryptionKeys(ctx.GlobalString("decryption-keys-path"))
+		if err != nil {
+			return errors.Wrap(err, "Unable to get decryption keys in provided key path")
+		}
+		decCc = combineDecryptionConfigs(keyPathCc.DecryptConfig, &payload.DecryptConfig)
+	}
+
+	_, r, _, err := encryption.DecryptLayer(decCc, os.Stdin, payload.Descriptor, false)
 	if err != nil {
 		return errors.Wrapf(err, "call to DecryptLayer failed")
 	}

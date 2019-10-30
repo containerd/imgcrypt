@@ -29,7 +29,11 @@ var (
 		}, cli.StringFlag{
 			Name:  "gpg-version",
 			Usage: "The GPG version (\"v1\" or \"v2\"), default will make an educated guess",
-		}, cli.StringSliceFlag{
+		}, cli.BoolFlag{
+			Name:  "skip-decrypt-auth",
+			Usage: "Indicates if check authorization for use of images should be skipped i.e. for use in node key model",
+		},
+		cli.StringSliceFlag{
 			Name:  "key",
 			Usage: "A secret key's filename and an optional password separated by colon; this option may be provided multiple times",
 		}, cli.StringSliceFlag{
