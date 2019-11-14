@@ -58,9 +58,17 @@ func WithUnpackConfigApplyOpts(opt diff.ApplyOpt) containerd.UnpackOpt {
 	}
 }
 
+// WithUnpackOpts is used to add unpack options to the unpacker.
+func WithUnpackOpts(opts []containerd.UnpackOpt) containerd.RemoteOpt {
+	return func(_ *containerd.Client, c *containerd.RemoteContext) error {
+		c.UnpackOpts = append(c.UnpackOpts, opts...)
+		return nil
+	}
+}
+
 // WithAuthorizationCheck checks the authorization of keys used for encrypted containers
 // be checked upon creation of a container
-func WithAuthorizationCheck(dcparameters map[string][][]byte) containerd.NewContainerOpts {
+func WithAuthorizationCheck(dc *encconfig.DecryptConfig) containerd.NewContainerOpts {
 	return func(ctx context.Context, client *containerd.Client, c *containers.Container) error {
 		image, err := client.ImageService().Get(ctx, c.Image)
 		if errdefs.IsNotFound(err) {
@@ -70,10 +78,6 @@ func WithAuthorizationCheck(dcparameters map[string][][]byte) containerd.NewCont
 			return err
 		}
 
-		dc := encconfig.DecryptConfig{
-			Parameters: dcparameters,
-		}
-
-		return CheckAuthorization(ctx, client.ContentStore(), image.Target, &dc)
+		return CheckAuthorization(ctx, client.ContentStore(), image.Target, dc)
 	}
 }
