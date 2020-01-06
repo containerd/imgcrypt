@@ -148,8 +148,9 @@ func NewContainer(ctx gocontext.Context, client *containerd.Client, context *cli
 	if err != nil {
 		return nil, err
 	}
-
-	cOpts = append(cOpts, encryption.WithAuthorizationCheck(cc.DecryptConfig))
+	if !context.IsSet("skip-decrypt-auth") {
+		cOpts = append(cOpts, encryption.WithAuthorizationCheck(cc.DecryptConfig))
+	}
 
 	return client.NewContainer(ctx, id, cOpts...)
 }
