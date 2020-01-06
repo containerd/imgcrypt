@@ -1,17 +1,13 @@
 dist: xenial
 language: go
 
-os:
-- linux
-
 go:
-  - "1.12.x"
+  - "1.13.x"
 
-matrix:
-  include:
-    - os: linux
-
-go_import_path: github.com/containerd/imgcrypt
+env:
+  global:
+    - RUNC_VERSION=v1.0.0-rc9
+    - GOLANGCI_LINT_VERSION=v1.22.2
 
 addons:
   apt:
@@ -33,8 +29,10 @@ before_install:
     popd
 
 install:
-  - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin v1.19.1
-  - sudo PATH=$PATH GOPATH=$GOPATH script/setup/install-runc
+  - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin ${GOLANGCI_LINT_VERSION}
+  # set up runc
+  - sudo curl -L https://github.com/opencontainers/runc/releases/download/${RUNC_VERSION}/runc.amd64 -o /usr/bin/runc
+  - sudo chmod +x /usr/bin/runc
   - go get -u github.com/vbatts/git-validation
   - go get -u github.com/kunalkushwaha/ltag
 
