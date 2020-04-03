@@ -49,3 +49,4 @@ fi
 for f in "$@"; do
 	$mksyscall $mkargs "${f}_${GOOS}.go" | fix > "${f}_${GOOS}_${GOARCH}.go"
 done
+
