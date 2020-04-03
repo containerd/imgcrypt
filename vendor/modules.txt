@@ -107,7 +107,7 @@ github.com/containerd/go-runc
 github.com/containerd/ttrpc
 # github.com/containerd/typeurl v0.0.0-20180627222232-a93fcdb778cd
 github.com/containerd/typeurl
-# github.com/containers/ocicrypt v0.0.0-20190930154801-b87a4a69c741
+# github.com/containers/ocicrypt v1.0.2
 github.com/containers/ocicrypt
 github.com/containers/ocicrypt/blockcipher
 github.com/containers/ocicrypt/config

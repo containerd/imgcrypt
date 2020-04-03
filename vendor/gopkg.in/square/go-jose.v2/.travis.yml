@@ -43,3 +43,4 @@ script:
 after_success:
 - gocovmerge *.cov */*.cov > merged.coverprofile
 - $HOME/gopath/bin/goveralls -coverprofile merged.coverprofile -service=travis-ci
+

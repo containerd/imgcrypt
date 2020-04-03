@@ -30,3 +30,4 @@ protoc --go_out=plugins=grpc,paths=source_relative:. -I. grpc/binarylog/grpc_bin
 popd
 rm -f ./grpc_binarylog_v1/*.pb.go
 cp "$TMP"/grpc/binarylog/grpc_binarylog_v1/*.pb.go ../../binarylog/grpc_binarylog_v1/
+
