@@ -107,7 +107,7 @@ github.com/containerd/go-runc
 github.com/containerd/ttrpc
 # github.com/containerd/typeurl v0.0.0-20180627222232-a93fcdb778cd
 github.com/containerd/typeurl
-# github.com/containers/ocicrypt v1.0.2
+# github.com/containers/ocicrypt v1.0.3
 github.com/containers/ocicrypt
 github.com/containers/ocicrypt/blockcipher
 github.com/containers/ocicrypt/config
@@ -129,8 +129,6 @@ github.com/docker/distribution/registry/api/errcode
 github.com/docker/go-events
 # github.com/docker/go-units v0.4.0
 github.com/docker/go-units
-# github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa
-github.com/fullsailor/pkcs7
 # github.com/godbus/dbus v0.0.0-20151105175453-c7fdd8b5cd55
 github.com/godbus/dbus
 # github.com/gogo/googleapis v1.2.0
@@ -172,6 +170,8 @@ github.com/sirupsen/logrus
 github.com/syndtr/gocapability/capability
 # github.com/urfave/cli v1.22.1
 github.com/urfave/cli
+# go.mozilla.org/pkcs7 v0.0.0-20200128120323-432b2356ecb1
+go.mozilla.org/pkcs7
 # golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
 golang.org/x/crypto/cast5
 golang.org/x/crypto/ed25519
