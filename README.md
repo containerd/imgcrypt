@@ -47,7 +47,7 @@ state = "/tmp/run/containerd"
 Create an RSA key pair using the openssl command line tool and encrypted an image:
 
 ```
-# openssl genrsa --out mykey.pem
+# openssl genrsa -out mykey.pem
 Generating RSA private key, 2048 bit long modulus (2 primes)
 ...............................................+++++
 ............................+++++
