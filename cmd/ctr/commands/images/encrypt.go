@@ -20,10 +20,10 @@ import (
 	"fmt"
 
 	"github.com/containerd/containerd/cmd/ctr/commands"
+	"github.com/containerd/imgcrypt/cmd/ctr/commands/flags"
 	encconfig "github.com/containers/ocicrypt/config"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
-	"github.com/containerd/imgcrypt/cmd/ctr/commands/flags"
 )
 
 var encryptCommand = cli.Command{
@@ -47,6 +47,7 @@ var encryptCommand = cli.Command{
     - pgp:<email-address>
     - jwe:<public-key-file-path>
     - pkcs7:<x509-file-path>
+    - pkcs11:<so-file-path>
 `,
 	Flags: append(append(commands.RegistryFlags, cli.StringSliceFlag{
 		Name:  "recipient",
@@ -83,7 +84,7 @@ var encryptCommand = cli.Command{
 
 		layers32 := commands.IntToInt32Array(context.IntSlice("layer"))
 
-		gpgRecipients, pubKeys, x509s, err := processRecipientKeys(recipients)
+		gpgRecipients, pubKeys, x509s, modules, err := processRecipientKeys(recipients)
 		if err != nil {
 			return err
 		}
@@ -128,6 +129,12 @@ var encryptCommand = cli.Command{
 			return err
 		}
 		encryptCcs = append(encryptCcs, jweCc)
+
+		p11Cc, err := encconfig.EncryptWithPkcs11(modules)
+		if err != nil {
+			return err
+		}
+		encryptCcs = append(encryptCcs, p11Cc)
 
 		cc := encconfig.CombineCryptoConfigs(encryptCcs)
 

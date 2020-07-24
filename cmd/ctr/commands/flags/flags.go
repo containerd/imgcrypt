@@ -39,6 +39,9 @@ var (
 		}, cli.StringSliceFlag{
 			Name:  "dec-recipient",
 			Usage: "Recipient of the image; used only for PKCS7 and must be an x509 certificate",
+		}, cli.StringFlag{
+			Name:  "p11-module",
+			Usage: "PKCS#11 module path; used only for PKCS11",
 		},
 	}
 )

@@ -27,12 +27,12 @@ import (
 
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/images"
-	encutils "github.com/containers/ocicrypt/utils"
 	"github.com/containerd/containerd/platforms"
+	"github.com/containerd/imgcrypt/cmd/ctr/commands/img"
 	imgenc "github.com/containerd/imgcrypt/images/encryption"
 	"github.com/containers/ocicrypt"
 	encconfig "github.com/containers/ocicrypt/config"
-	"github.com/containerd/imgcrypt/cmd/ctr/commands/img"
+	encutils "github.com/containers/ocicrypt/utils"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
@@ -83,18 +83,19 @@ func isUserSelectedPlatform(platform *ocispec.Platform, platformList []ocispec.P
 }
 
 // processRecipientKeys sorts the array of recipients by type. Recipients may be either
-// x509 certificates, public keys, or PGP public keys identified by email address or name
-func processRecipientKeys(recipients []string) ([][]byte, [][]byte, [][]byte, error) {
+// x509 certificates, public keys, PGP public keys identified by email address or name or PKCS11 so path
+func processRecipientKeys(recipients []string) ([][]byte, [][]byte, [][]byte, [][]byte, error) {
 	var (
 		gpgRecipients [][]byte
 		pubkeys       [][]byte
 		x509s         [][]byte
+		p11Modules    [][]byte
 	)
 	for _, recipient := range recipients {
 
 		idx := strings.Index(recipient, ":")
 		if idx < 0 {
-			return nil, nil, nil, errors.New("Invalid recipient format")
+			return nil, nil, nil, nil, errors.New("Invalid recipient format")
 		}
 
 		protocol := recipient[:idx]
@@ -106,28 +107,40 @@ func processRecipientKeys(recipients []string) ([][]byte, [][]byte, [][]byte, er
 		case "jwe":
 			tmp, err := ioutil.ReadFile(value)
 			if err != nil {
-				return nil, nil, nil, errors.Wrap(err, "Unable to read file")
+				return nil, nil, nil, nil, errors.Wrap(err, "Unable to read file")
 			}
 			if !encutils.IsPublicKey(tmp) {
-				return nil, nil, nil, errors.New("File provided is not a public key")
+				return nil, nil, nil, nil, errors.New("File provided is not a public key")
 			}
 			pubkeys = append(pubkeys, tmp)
 
 		case "pkcs7":
 			tmp, err := ioutil.ReadFile(value)
 			if err != nil {
-				return nil, nil, nil, errors.Wrap(err, "Unable to read file")
+				return nil, nil, nil, nil, errors.Wrap(err, "Unable to read file")
 			}
 			if !encutils.IsCertificate(tmp) {
-				return nil, nil, nil, errors.New("File provided is not an x509 cert")
+				return nil, nil, nil, nil, errors.New("File provided is not an x509 cert")
 			}
 			x509s = append(x509s, tmp)
-
+		case "pkcs11":
+			if !encutils.IsPkcs11SharedLibrary(value) {
+				return nil, nil, nil, nil, errors.New("Unable connect to PKCS11 device")
+			}
+			p11Modules = append(p11Modules, []byte(value))
+			password, err := encutils.InputPassword("Module")
+			if err != nil {
+				return nil, nil, nil, nil, err
+			}
+			if password == "" {
+				return nil, nil, nil, nil, errors.New("Please input the pin")
+			}
+			p11Modules = append(p11Modules, []byte(password))
 		default:
-			return nil, nil, nil, errors.New("Provided protocol not recognized")
+			return nil, nil, nil, nil, errors.New("Provided protocol not recognized")
 		}
 	}
-	return gpgRecipients, pubkeys, x509s, nil
+	return gpgRecipients, pubkeys, x509s, p11Modules, nil
 }
 
 // Process a password that may be in any of the following formats:
@@ -390,7 +403,7 @@ func CreateDecryptCryptoConfig(context *cli.Context, descs []ocispec.Descriptor)
 	ccs := []encconfig.CryptoConfig{}
 
 	// x509 cert is needed for PKCS7 decryption
-	_, _, x509s, err := processRecipientKeys(context.StringSlice("dec-recipient"))
+	_, _, x509s, _, err := processRecipientKeys(context.StringSlice("dec-recipient"))
 	if err != nil {
 		return encconfig.CryptoConfig{}, err
 	}
@@ -438,7 +451,32 @@ func CreateDecryptCryptoConfig(context *cli.Context, descs []ocispec.Descriptor)
 	}
 	ccs = append(ccs, privKeysCc)
 
+	modules, err := processModules(context.String("p11-module"))
+	// also include module and pin
+	if len(modules) == 2 {
+		p11Cc, err := encconfig.DecryptWithPkcs11(modules)
+		if err != nil {
+			return encconfig.CryptoConfig{}, err
+		}
+		ccs = append(ccs, p11Cc)
+	}
 	return encconfig.CombineCryptoConfigs(ccs), nil
+}
+
+// processModules
+func processModules(module string) (modules [][]byte, err error) {
+	module = strings.TrimSpace(module)
+	// dont use pkcs11
+	if module == "" {
+		return nil, nil
+	}
+	modules = append(modules, []byte(module))
+	password, err := encutils.InputPassword("Module")
+	if password == "" || err != nil {
+		return nil, errors.Wrap(err, "pin error")
+	}
+	modules = append(modules, []byte(password))
+	return
 }
 
 // parsePlatformArray parses an array of specifiers and converts them into an array of specs.Platform
