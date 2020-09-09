@@ -26,11 +26,11 @@ import (
 	"github.com/containerd/containerd/log"
 	"github.com/containerd/containerd/platforms"
 	"github.com/containerd/imgcrypt"
+	"github.com/containerd/imgcrypt/cmd/ctr/commands/flags"
 	"github.com/containerd/imgcrypt/images/encryption"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
-	"github.com/containerd/imgcrypt/cmd/ctr/commands/flags"
 )
 
 var pullCommand = cli.Command{
@@ -110,7 +110,12 @@ command. As part of this process, we do the following:
 			p = append(p, platforms.DefaultSpec())
 		}
 
-		cc, err := CreateDecryptCryptoConfig(context, nil)
+		ccopts, err := GetCryptoConfigOpts()
+		if err != nil {
+			return err
+		}
+
+		cc, err := CreateDecryptCryptoConfigWithOpts(context, nil, ccopts)
 		if err != nil {
 			return err
 		}

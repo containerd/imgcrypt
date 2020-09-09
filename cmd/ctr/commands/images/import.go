@@ -27,9 +27,9 @@ import (
 	"github.com/containerd/containerd/images/archive"
 	"github.com/containerd/containerd/log"
 	"github.com/containerd/imgcrypt"
+	"github.com/containerd/imgcrypt/cmd/ctr/commands/flags"
 	"github.com/containerd/imgcrypt/images/encryption"
 	"github.com/urfave/cli"
-	"github.com/containerd/imgcrypt/cmd/ctr/commands/flags"
 )
 
 var importCommand = cli.Command{
@@ -134,8 +134,13 @@ If foobar.tar contains an OCI ref named "latest" and anonymous ref "sha256:deadb
 			return closeErr
 		}
 
+		ccopts, err := GetCryptoConfigOpts()
+		if err != nil {
+			return err
+		}
+
 		if !context.Bool("no-unpack") {
-			cc, err := CreateDecryptCryptoConfig(context, nil)
+			cc, err := CreateDecryptCryptoConfigWithOpts(context, nil, ccopts)
 			if err != nil {
 				return err
 			}

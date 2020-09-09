@@ -56,6 +56,11 @@ func NewContainer(ctx gocontext.Context, client *containerd.Client, context *cli
 		spec  containerd.NewContainerOpts
 	)
 
+	ccopts, err := images.GetCryptoConfigOpts()
+	if err != nil {
+		return nil, err
+	}
+
 	cOpts = append(cOpts, containerd.WithContainerLabels(commands.LabelArgs(context.StringSlice("label"))))
 	if config {
 		opts = append(opts, oci.WithSpecFromFile(context.String("config")))
@@ -96,8 +101,9 @@ func NewContainer(ctx gocontext.Context, client *containerd.Client, context *cli
 			if err != nil {
 				return nil, err
 			}
+
 			if !unpacked {
-				cc, err := images.CreateDecryptCryptoConfig(context, nil)
+				cc, err := images.CreateDecryptCryptoConfigWithOpts(context, nil, ccopts)
 				if err != nil {
 					return nil, err
 				}
@@ -180,7 +186,7 @@ func NewContainer(ctx gocontext.Context, client *containerd.Client, context *cli
 
 	cOpts = append(cOpts, spec)
 
-	cc, err := images.CreateDecryptCryptoConfig(context, nil)
+	cc, err := images.CreateDecryptCryptoConfigWithOpts(context, nil, ccopts)
 	if err != nil {
 		return nil, err
 	}

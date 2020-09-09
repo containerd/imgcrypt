@@ -20,8 +20,8 @@ import (
 	"fmt"
 
 	"github.com/containerd/containerd/cmd/ctr/commands"
-	imgenc "github.com/containerd/imgcrypt/images/encryption"
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/flags"
+	imgenc "github.com/containerd/imgcrypt/images/encryption"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 )
@@ -83,7 +83,12 @@ var decryptCommand = cli.Command{
 			return nil
 		}
 
-		cc, err := CreateDecryptCryptoConfig(context, descs)
+		ccopts, err := GetCryptoConfigOpts()
+		if err != nil {
+			return err
+		}
+
+		cc, err := CreateDecryptCryptoConfigWithOpts(context, descs, ccopts)
 		if err != nil {
 			return err
 		}
