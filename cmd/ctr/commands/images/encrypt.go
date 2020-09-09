@@ -20,9 +20,9 @@ import (
 	"fmt"
 
 	"github.com/containerd/containerd/cmd/ctr/commands"
+	"github.com/containerd/imgcrypt/cmd/ctr/commands/flags"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
-	"github.com/containerd/imgcrypt/cmd/ctr/commands/flags"
 )
 
 var encryptCommand = cli.Command{
@@ -87,7 +87,12 @@ var encryptCommand = cli.Command{
 			return err
 		}
 
-		cc, err := CreateCryptoConfig(context, descs)
+		opts, err := GetCryptoConfigOpts()
+		if err != nil {
+			return err
+		}
+
+		cc, err := CreateCryptoConfigWithOpts(context, descs, opts)
 		if err != nil {
 			return err
 		}
