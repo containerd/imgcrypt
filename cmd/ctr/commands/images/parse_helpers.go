@@ -239,3 +239,71 @@ func CreateDecryptCryptoConfig(context *cli.Context, descs []ocispec.Descriptor)
 
 	return encconfig.CombineCryptoConfigs(ccs), nil
 }
+
+// CreateCryptoConfigWithOpts from the list of recipient strings and list of key paths of private keys
+// The opts parameter holds options necessary for de- and encryption, such as when using pkcs11 for example.
+func CreateCryptoConfig(context *cli.Context, descs []ocispec.Descriptor) (encconfig.CryptoConfig, error) {
+	recipients := context.StringSlice("recipient")
+	keys := context.StringSlice("key")
+
+	var decryptCc *encconfig.CryptoConfig
+	ccs := []encconfig.CryptoConfig{}
+	if len(keys) > 0 {
+		// Create Decryption CryptoConfig for use in adding recipients to
+		// existing image if decryptable.
+		dcc, err := CreateDecryptCryptoConfig(context, descs)
+		if err != nil {
+			return encconfig.CryptoConfig{}, err
+		}
+		decryptCc = &dcc
+		ccs = append(ccs, dcc)
+	}
+
+	if len(recipients) > 0 {
+		gpgRecipients, pubKeys, x509s, err := processRecipientKeys(recipients)
+		if err != nil {
+			return encconfig.CryptoConfig{}, err
+		}
+		encryptCcs := []encconfig.CryptoConfig{}
+
+		gpgClient, err := createGPGClient(context)
+		gpgInstalled := err == nil
+
+		if len(gpgRecipients) > 0 && gpgInstalled {
+			gpgPubRingFile, err := gpgClient.ReadGPGPubRingFile()
+			if err != nil {
+				return encconfig.CryptoConfig{}, err
+			}
+
+			gpgCc, err := encconfig.EncryptWithGpg(gpgRecipients, gpgPubRingFile)
+			if err != nil {
+				return encconfig.CryptoConfig{}, err
+			}
+			encryptCcs = append(encryptCcs, gpgCc)
+		}
+
+		// Create Encryption Crypto Config
+		pkcs7Cc, err := encconfig.EncryptWithPkcs7(x509s)
+		if err != nil {
+			return encconfig.CryptoConfig{}, err
+		}
+		encryptCcs = append(encryptCcs, pkcs7Cc)
+
+		jweCc, err := encconfig.EncryptWithJwe(pubKeys)
+		if err != nil {
+			return encconfig.CryptoConfig{}, err
+		}
+		encryptCcs = append(encryptCcs, jweCc)
+
+		ecc := encconfig.CombineCryptoConfigs(encryptCcs)
+		if decryptCc != nil {
+			ecc.EncryptConfig.AttachDecryptConfig(decryptCc.DecryptConfig)
+		}
+		ccs = append(ccs, ecc)
+	}
+	if len(ccs) > 0 {
+		return encconfig.CombineCryptoConfigs(ccs), nil
+	} else {
+		return encconfig.CryptoConfig{}, nil
+	}
+}
