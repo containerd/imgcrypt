@@ -20,7 +20,6 @@ import (
 	"fmt"
 
 	"github.com/containerd/containerd/cmd/ctr/commands"
-	encconfig "github.com/containers/ocicrypt/config"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/flags"
@@ -83,61 +82,15 @@ var encryptCommand = cli.Command{
 
 		layers32 := commands.IntToInt32Array(context.IntSlice("layer"))
 
-		gpgRecipients, pubKeys, x509s, err := processRecipientKeys(recipients)
-		if err != nil {
-			return err
-		}
-
 		_, descs, err := getImageLayerInfos(client, ctx, local, layers32, context.StringSlice("platform"))
 		if err != nil {
 			return err
 		}
 
-		encryptCcs := []encconfig.CryptoConfig{}
-		_, err = createGPGClient(context)
-		gpgInstalled := err == nil
-
-		if len(gpgRecipients) > 0 && gpgInstalled {
-			gpgClient, err := createGPGClient(context)
-			if err != nil {
-				return err
-			}
-
-			gpgPubRingFile, err := gpgClient.ReadGPGPubRingFile()
-			if err != nil {
-				return err
-			}
-
-			gpgCc, err := encconfig.EncryptWithGpg(gpgRecipients, gpgPubRingFile)
-			if err != nil {
-				return err
-			}
-			encryptCcs = append(encryptCcs, gpgCc)
-
-		}
-
-		// Create Encryption Crypto Config
-		pkcs7Cc, err := encconfig.EncryptWithPkcs7(x509s)
+		cc, err := CreateCryptoConfig(context, descs)
 		if err != nil {
 			return err
 		}
-		encryptCcs = append(encryptCcs, pkcs7Cc)
-
-		jweCc, err := encconfig.EncryptWithJwe(pubKeys)
-		if err != nil {
-			return err
-		}
-		encryptCcs = append(encryptCcs, jweCc)
-
-		cc := encconfig.CombineCryptoConfigs(encryptCcs)
-
-		// Create Decryption CryptoConfig for use in adding recipients to
-		// existing image if decryptable.
-		decryptCc, err := CreateDecryptCryptoConfig(context, descs)
-		if err != nil {
-			return err
-		}
-		cc.EncryptConfig.AttachDecryptConfig(decryptCc.DecryptConfig)
 
 		_, err = encryptImage(client, ctx, local, newName, &cc, layers32, context.StringSlice("platform"))
 
