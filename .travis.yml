@@ -1,4 +1,4 @@
-dist: xenial
+dist: bionic
 language: go
 
 go:
@@ -13,6 +13,8 @@ addons:
   apt:
     packages:
       - libseccomp-dev
+      - gnutls-bin
+      - softhsm2
 
 before_install:
   - uname -r

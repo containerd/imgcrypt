@@ -28,6 +28,8 @@ fi
 ROOT=$(dirname "$0")/../../
 BIN=${ROOT}/bin
 
+SOFTHSM_SETUP=$(dirname "$0")/softhsm_setup
+
 ALPINE=docker.io/library/alpine:latest
 ALPINE_ENC=docker.io/library/alpine:enc
 ALPINE_DEC=docker.io/library/alpine:dec
@@ -610,18 +612,20 @@ testJWE() {
 
 testLocalKeys() {
 	createJWEKeys
+	setupPKCS11
 
-	echo "Testing JWE type of encryption with local unpack keys"
+	echo "Testing JWE and PKCS11 type of encryption with local unpack keys"
 
 	# Remove original images
 	$CTR images rm --sync ${ALPINE_ENC} ${ALPINE_DEC} ${NGINX_ENC} ${NGINX_DEC} &>/dev/null
 
-	local recipient
-	recipient=jwe:${PUBKEYPEM}
+	local recipient1=jwe:${PUBKEYPEM}
+	local recipient2=pkcs11:${SOFTHSM_KEY}
 	$CTR images encrypt \
-		--recipient ${recipient} \
+		--recipient ${recipient1} \
+		--recipient ${recipient2} \
 		${ALPINE} ${ALPINE_ENC}
-	failExit $? "Image encryption with JWE failed; public key: ${recipient}"
+	failExit $? "Image encryption with JWE and PKCS11 failed"
 
 	LAYER_INFO_ALPINE_ENC="$($CTR images layerinfo ${ALPINE_ENC})"
 	failExit $? "Image layerinfo on JWE encrypted image failed; public key: ${recipient}"
@@ -631,7 +635,7 @@ testLocalKeys() {
 	failExit $? "Image layerinfo on JWE encrypted image shows differences in architectures"
 
 	diff <(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $5}' | sort | uniq | tr -d '\n') \
-		<(echo -n "ENCRYPTIONjwe")
+		<(echo -n "ENCRYPTIONjwe,pkcs11")
 	failExit $? "Image layerinfo on JWE encrypted image shows unexpected encryption"
 
 	# Remove snapshots to force the decryption with unpacker
@@ -653,19 +657,35 @@ testLocalKeys() {
 		cp $privkey ${LOCAL_KEYS_PATH}/.
 	done
 
-	echo "Testing creation of container from encrypted image with local keys"
+	echo "Testing creation of container from encrypted image with local keys (JWE)"
 	MSG=$($CTR container rm testcontainer1 2>&1)
 	MSG=$($CTR snapshot rm testcontainer1 2>&1)
 	MSG=$(sudo $CTR container create ${ALPINE_ENC} --skip-decrypt-auth --key ${PRIVKEY2PEM} testcontainer1 2>&1)
 
-	failExit $? "Should have been able to create a container from encrypted image when local keys exists\n${MSG}"
+	failExit $? "Should have been able to create a container from encrypted image when local keys exists (JWE)\n${MSG}"
+	MSG=$($CTR container rm testcontainer1 2>&1)
+	MSG=$($CTR snapshot rm testcontainer1 2>&1)
+
+	rm -f ${LOCAL_KEYS_PATH}/*
+
+	# now test with the pkcs11 key
+	for privkey in ${SOFTHSM_KEY}; do
+		cp $privkey ${LOCAL_KEYS_PATH}/.
+	done
+
+	echo "Testing creation of container from encrypted image with local keys (PKCS11)"
+	MSG=$($CTR container rm testcontainer1 2>&1)
+	MSG=$($CTR snapshot rm testcontainer1 2>&1)
+	MSG=$(sudo $CTR container create ${ALPINE_ENC} --skip-decrypt-auth --key ${PRIVKEY2PEM} testcontainer1 2>&1)
+
+	failExit $? "Should have been able to create a container from encrypted image when local keys exists (PKCS11)\n${MSG}"
 	MSG=$($CTR container rm testcontainer1 2>&1)
 	MSG=$($CTR snapshot rm testcontainer1 2>&1)
 
 	$CTR images rm --sync ${ALPINE_ENC} &>/dev/null
-	echo "Encryption with ${recipient} and decrypting with local unpack keys worked"
+	echo "Encryption with ${recipient1} and ${recipient2} and decrypting with local unpack keys worked"
 
-	echo "PASS: JWE Type of encryption with local unpack keys"
+	echo "PASS: JWE and PKCS11 type of encryption with local unpack keys"
 	echo
 }
 
@@ -798,12 +818,101 @@ testPKCS7() {
 	$CTR images rm --sync ${ALPINE_DEC} ${ALPINE_ENC} &>/dev/null
 }
 
-testPGPandJWEandPKCS7() {
+setupPKCS11() {
+	echo "Generating softhsm key for PKCS11 encryption"
+
+	local output
+
+	# Env. variable for softhsm_setup
+	export SOFTHSM_SETUP_CONFIGDIR=${WORKDIR}
+	# Env. variable for ctr-enc
+	export IMGCRYPT_CONFIG=${WORKDIR}/imgcrypt.conf
+
+	cat <<_EOF_ > ${IMGCRYPT_CONFIG}
+pkcs11:
+  module-directories:
+    - /usr/lib64/pkcs11/ # Fedora,RedHat,openSUSE
+    - /usr/lib/softhsm/  # Ubuntu,Debian,Alpine
+_EOF_
+	SOFTHSM_KEY=${WORKDIR}/softhsm_key.yaml
+
+	output=$(${SOFTHSM_SETUP} setup 2>&1)
+	failExit $? "'softhsm_setup setup' failed: ${output}"
+	keyuri=$(echo "${output}" | cut -d " " -f2)
+	cat <<_EOF_ >${SOFTHSM_KEY}
+pkcs11:
+  uri: ${keyuri}
+module:
+  env:
+    SOFTHSM2_CONF: ${SOFTHSM_SETUP_CONFIGDIR}/softhsm2.conf
+_EOF_
+
+	# Note: Need to set OCICRYPT_OAEP_HASHALG=sha1 to be able to decrypt after using the PEM key!
+	SOFTHSM_KEY_PEM=${WORKDIR}/softhsm_key.pem
+	${SOFTHSM_SETUP} getpubkey > ${SOFTHSM_KEY_PEM}
+	failExit $? "'softhsm_setup getpubkey' failed"
+}
+
+testPKCS11() {
+	setupPKCS11
+
+	echo "Testing PKCS11 type of encryption"
+
+	# Env. variable needed for encryption with SOFTHSM_KEY_PEM
+	export OCICRYPT_OAEP_HASHALG=sha1
+
+	for recipient in pkcs11:${SOFTHSM_KEY} pkcs11:${SOFTHSM_KEY_PEM}; do
+		$CTR images encrypt \
+			--recipient ${recipient} \
+			${ALPINE} ${ALPINE_ENC}
+		failExit $? "Image encryption with PKCS11 failed; public key: ${recipient}"
+
+		LAYER_INFO_ALPINE_ENC="$($CTR images layerinfo ${ALPINE_ENC})"
+		failExit $? "Image layerinfo on PKCS11 encrypted image failed; public key: ${recipient}"
+
+		diff <(echo "${LAYER_INFO_ALPINE}" | gawk '{print $3}') \
+			<(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $3}')
+		failExit $? "Image layerinfo on PKCS11 encrypted image shows differences in architectures"
+
+		diff <(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $5}' | sort | uniq | tr -d '\n') \
+			<(echo -n "ENCRYPTIONpkcs11")
+		failExit $? "Image layerinfo on PKCS11 encrypted image shows unexpected encryption"
+
+		for privkey in ${SOFTHSM_KEY}; do
+			$CTR images decrypt \
+				--key ${privkey} \
+				${ALPINE_ENC} ${ALPINE_DEC}
+			failExit $? "Image decryption with PKCS11 failed: private key: ${privkey}"
+
+			LAYER_INFO_ALPINE_DEC="$($CTR images layerinfo ${ALPINE_DEC})"
+			failExit $? "Image layerinfo on decrypted image failed (PKCS11)"
+
+			diff <(echo "${LAYER_INFO_ALPINE}") <(echo "${LAYER_INFO_ALPINE_DEC}")
+			failExit $? "Image layerinfos are different (PKCS11)"
+
+			$CTR images rm --sync ${ALPINE_DEC} &>/dev/null
+			echo "Decryption with ${privkey} worked."
+		done
+		$CTR images rm --sync ${ALPINE_ENC} &>/dev/null
+		echo "Encryption with ${recipient} worked"
+	done
+
+	$CTR images rm --sync ${ALPINE_DEC} &>/dev/null
+
+	echo "PASS: PKCS11 Type of encryption"
+	echo
+}
+
+testPGPandJWEandPKCS7andPKCS11() {
 	local ctr
 
 	createJWEKeys
 	setupPGP
 	setupPKCS7
+	setupPKCS11
+
+	# Env. variable needed for encryption with SOFTHSM_KEY_PEM
+	export OCICRYPT_OAEP_HASHALG=sha1
 
 	echo "Testing large recipient list"
 	$CTR images encrypt \
@@ -815,6 +924,8 @@ testPGPandJWEandPKCS7() {
 		--recipient jwe:${PUBKEY2PEM} \
 		--recipient pkcs7:${CLIENTCERT} \
 		--recipient pkcs7:${CLIENT2CERT} \
+		--recipient pkcs11:${SOFTHSM_KEY} \
+		--recipient pkcs11:${SOFTHSM_KEY_PEM} \
 		${ALPINE} ${ALPINE_ENC}
 	failExit $? "Image encryption to many different recipients failed"
 	LAYER_INFO_ALPINE_ENC="$($CTR images layerinfo ${ALPINE_ENC})"
@@ -825,12 +936,12 @@ testPGPandJWEandPKCS7() {
 	failExit $? "Image layerinfo on multi-recipient encrypted image shows differences in architectures"
 
 	diff <(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $5}' | sort | uniq | tr -d '\n') \
-		<(echo -n "ENCRYPTIONjwe,pgp,pkcs7")
+		<(echo -n "ENCRYPTIONjwe,pgp,pkcs11,pkcs7")
 
 	$CTR images rm --sync ${ALPINE_ENC} &>/dev/null
 	echo "Encryption to multiple different types of recipients worked."
 
-	echo "Testing adding first PGP and then JWE and PKCS7 recipients"
+	echo "Testing adding first PGP and then JWE and PKCS7 and PKCS11 recipients"
 	$CTR images encrypt \
 		--gpg-homedir ${GPGHOMEDIR} \
 		--gpg-version 2 \
@@ -839,7 +950,11 @@ testPGPandJWEandPKCS7() {
 	failExit $? "Image encryption with PGP failed; recipient: testkey1@key.org"
 
 	ctr=0
-	for recipient in jwe:${PUBKEYPEM} pgp:testkey2@key.org jwe:${PUBKEY2PEM} pkcs7:${CLIENTCERT} pkcs7:${CLIENT2CERT}; do
+	for recipient in jwe:${PUBKEYPEM} \
+			pgp:testkey2@key.org \
+			jwe:${PUBKEY2PEM} \
+			pkcs7:${CLIENTCERT} pkcs7:${CLIENT2CERT} \
+			pkcs11:${SOFTHSM_KEY} pkcs11:${SOFTHSM_KEY_PEM}; do
 		$CTR images encrypt \
 			--gpg-homedir ${GPGHOMEDIR} \
 			--gpg-version 2 \
@@ -858,9 +973,12 @@ testPGPandJWEandPKCS7() {
 		if [ $ctr -lt 3 ]; then
 			diff <(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $5}' | sort | uniq | tr -d '\n') \
 				<(echo -n "ENCRYPTIONjwe,pgp")
-		else
+		elif [ $ctr -lt 5 ]; then
 			diff <(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $5}' | sort | uniq | tr -d '\n') \
 				<(echo -n "ENCRYPTIONjwe,pgp,pkcs7")
+		else
+			diff <(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $5}' | sort | uniq | tr -d '\n') \
+				<(echo -n "ENCRYPTIONjwe,pgp,pkcs11,pkcs7")
 		fi
 		failExit $? "Image layerinfo on JWE encrypted image shows unexpected encryption (ctr=$ctr)"
 		ctr=$((ctr + 1))
@@ -922,16 +1040,36 @@ testPGPandJWEandPKCS7() {
 		echo "PKCS7 decryption with ${privkey} worked."
 	done
 
+	# and finally pkcs11
+	for privkey in ${SOFTHSM_KEY}; do
+		$CTR images decrypt \
+			--key ${privkey} \
+			${ALPINE_ENC} ${ALPINE_DEC}
+		failExit $? "Image decryption with PKCS11 failed: private key: ${privkey}"
+
+		LAYER_INFO_ALPINE_DEC="$($CTR images layerinfo ${ALPINE_DEC})"
+		failExit $? "Image layerinfo on decrypted image failed (PKCS11)"
+
+		diff <(echo "${LAYER_INFO_ALPINE}") <(echo "${LAYER_INFO_ALPINE_DEC}")
+		failExit $? "Image layerinfos are different (PKCS11)"
+
+		$CTR images rm --sync ${ALPINE_DEC} &>/dev/null
+		echo "PKCS11 Decryption with ${privkey} worked."
+	done
+
 	$CTR images rm --sync ${ALPINE_DEC} ${ALPINE_ENC} &>/dev/null
 
-	echo "Testing adding first JWE and then PGP and PKCS7 recipients"
+	echo "Testing adding first JWE and then PGP and PKCS7 and PKCS11 recipients"
 	$CTR images encrypt \
 		--recipient jwe:${PUBKEYPEM} \
 		${ALPINE} ${ALPINE_ENC}
 	failExit $? "Image encryption with JWE failed; public key: ${recipient}"
 
 	ctr=0
-	for recipient in pgp:testkey1@key.org pgp:testkey2@key.org jwe:${PUBKEY2PEM} pkcs7:${CLIENTCERT} pkcs7:${CLIENT2CERT}; do
+	for recipient in pgp:testkey1@key.org pgp:testkey2@key.org \
+			jwe:${PUBKEY2PEM} \
+			pkcs7:${CLIENTCERT} pkcs7:${CLIENT2CERT} \
+			pkcs11:${SOFTHSM_KEY} pkcs11:${SOFTHSM_KEY_PEM}; do
 		$CTR images encrypt \
 			--gpg-homedir ${GPGHOMEDIR} \
 			--gpg-version 2 \
@@ -950,15 +1088,18 @@ testPGPandJWEandPKCS7() {
 		if [ $ctr -lt 3 ]; then
 			diff <(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $5}' | sort | uniq | tr -d '\n') \
 				<(echo -n "ENCRYPTIONjwe,pgp")
-		else
+		elif [ $ctr -lt 5 ]; then
 			diff <(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $5}' | sort | uniq | tr -d '\n') \
 				<(echo -n "ENCRYPTIONjwe,pgp,pkcs7")
+		else
+			diff <(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $5}' | sort | uniq | tr -d '\n') \
+				<(echo -n "ENCRYPTIONjwe,pgp,pkcs11,pkcs7")
 		fi
 		failExit $? "Image layerinfo on JWE encrypted image shows unexpected encryption"
 		ctr=$((ctr + 1))
 	done
 
-	echo "PASS: Test with JWE, PGP, and PKCS7 recipients"
+	echo "PASS: Test with JWE, PGP, PKCS7, and PKCS11 recipients"
 	echo
 
 	$CTR images rm --sync ${ALPINE_DEC} ${ALPINE_ENC} &>/dev/null
@@ -971,7 +1112,8 @@ pullImages
 testPGP
 testJWE
 testPKCS7
-testPGPandJWEandPKCS7
+testPKCS11
+testPGPandJWEandPKCS7andPKCS11
 cleanup
 
 # Test containerd with flow where keys are in local directory

@@ -1,0 +1,299 @@
+#!/usr/bin/env bash
+
+#   Copyright The containerd Authors.
+
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+
+#       http://www.apache.org/licenses/LICENSE-2.0
+
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
+# This script may not work with softhsm2 2.0.0 but with >= 2.2.0
+
+if [ -z "$(type -P p11tool)" ]; then
+	echo "Need p11tool from gnutls"
+	exit 77
+fi
+
+if [ -z "$(type -P softhsm2-util)" ]; then
+	echo "Need softhsm2-util from softhsm2 package"
+	exit 77
+fi
+
+NAME=ocicrypt-test
+PIN=${PIN:-1234}
+SO_PIN=${SO_PIN:-1234}
+SOFTHSM_SETUP_CONFIGDIR=${SOFTHSM_SETUP_CONFIGDIR:-~/.config/softhsm2}
+export SOFTHSM2_CONF=${SOFTHSM_SETUP_CONFIGDIR}/softhsm2.conf
+
+UNAME_S="$(uname -s)"
+
+case "${UNAME_S}" in
+Darwin)
+	msg=$(sudo -v -n)
+	if [ $? -ne 0 ]; then
+		echo "Need password-less sudo rights on OS X to change /etc/gnutls/pkcs11.conf"
+		exit 1
+	fi
+	;;
+esac
+
+teardown_softhsm() {
+	local configdir=${SOFTHSM_SETUP_CONFIGDIR}
+	local configfile=${SOFTHSM2_CONF}
+	local bakconfigfile=${configfile}.bak
+	local tokendir=${configdir}/tokens
+
+	softhsm2-util --token "${NAME}" --delete-token &>/dev/null
+
+	case "${UNAME_S}" in
+	Darwin*)
+		if [ -f /etc/gnutls/pkcs11.conf.bak ]; then
+			sudo rm -f /etc/gnutls/pkcs11.conf
+			sudo mv /etc/gnutls/pkcs11.conf.bak \
+			   /etc/gnutls/pkcs11.conf &>/dev/null
+		fi
+		;;
+	esac
+
+	if [ -f "$bakconfigfile" ]; then
+		mv "$bakconfigfile" "$configfile"
+	else
+		rm -f "$configfile"
+	fi
+	if [ -d "$tokendir" ]; then
+		rm -rf "${tokendir}"
+	fi
+	return 0
+}
+
+setup_softhsm() {
+	local msg tokenuri keyuri
+	local configdir=${SOFTHSM_SETUP_CONFIGDIR}
+	local configfile=${SOFTHSM2_CONF}
+	local bakconfigfile=${configfile}.bak
+	local tokendir=${configdir}/tokens
+	local rc
+
+	case "${UNAME_S}" in
+	Darwin*)
+		if [ -f /etc/gnutls/pkcs11.conf.bak ]; then
+			echo "/etc/gnutls/pkcs11.conf.bak already exists; need to 'teardown' first"
+			return 1
+		fi
+		sudo mv /etc/gnutls/pkcs11.conf \
+			/etc/gnutls/pkcs11.conf.bak &>/dev/null
+		if [ $(id -u) -eq 0 ]; then
+			SONAME="$(sudo -u nobody brew ls --verbose softhsm | \
+				  grep -E "\.so$")"
+		else
+			SONAME="$(brew ls --verbose softhsm | \
+				  grep -E "\.so$")"
+		fi
+		sudo mkdir -p /etc/gnutls &>/dev/null
+		sudo bash -c "echo "load=${SONAME}" > /etc/gnutls/pkcs11.conf"
+		;;
+	esac
+
+	if ! [ -d $configdir ]; then
+		mkdir -p $configdir
+	fi
+	mkdir -p ${tokendir}
+
+	if [ -f $configfile ]; then
+		mv "$configfile" "$bakconfigfile"
+	fi
+
+	if ! [ -f $configfile ]; then
+		cat <<_EOF_ > $configfile
+directories.tokendir = ${tokendir}
+objectstore.backend = file
+log.level = DEBUG
+slots.removable = false
+_EOF_
+	fi
+
+	msg=$(p11tool --list-tokens 2>&1 | grep "token=${NAME}" | tail -n1)
+	if [ $? -ne 0 ]; then
+		echo "Could not list existing tokens"
+		echo "$msg"
+	fi
+	tokenuri=$(echo "$msg" | sed -n 's/.*URL: \([[:print:]*]\)/\1/p')
+
+	if [ -z "$tokenuri" ]; then
+		msg=$(softhsm2-util \
+			--init-token --pin ${PIN} --so-pin ${SO_PIN} \
+			--free --label ${NAME} 2>&1)
+		if [ $? -ne 0 ]; then
+			echo "Could not initialize token"
+			echo "$msg"
+			return 2
+		fi
+
+		slot=$(echo "$msg" | \
+		       sed -n 's/.* reassigned to slot \([0-9]*\)$/\1/p')
+		if [ -z "$slot" ]; then
+			slot=$(softhsm2-util --show-slots | \
+			       grep -E "^Slot " | head -n1 |
+			       sed -n 's/Slot \([0-9]*\)/\1/p')
+			if [ -z "$slot" ]; then
+				echo "Could not parse slot number from output."
+				echo "$msg"
+				return 3
+			fi
+		fi
+
+		msg=$(p11tool --list-tokens 2>&1 | \
+			grep "token=${NAME}" | tail -n1)
+		if [ $? -ne 0 ]; then
+			echo "Could not list existing tokens"
+			echo "$msg"
+		fi
+		tokenuri=$(echo "$msg" | sed -n 's/.*URL: \([[:print:]*]\)/\1/p')
+		if [ -z "${tokenuri}" ]; then
+			echo "Could not get tokenuri!"
+			return 4
+		fi
+
+		# more recent versions of p11tool have --generate-privkey ...
+		msg=$(GNUTLS_PIN=$PIN p11tool \
+			--generate-privkey=rsa --label mykey --login \
+			"${tokenuri}" 2>&1)
+		if [ $? -ne 0 ]; then
+			# ... older versions have --generate-rsa
+			msg=$(GNUTLS_PIN=$PIN p11tool \
+				--generate-rsa --label mykey --login \
+				"${tokenuri}" 2>&1)
+			if [ $? -ne 0 ]; then
+				echo "Could not create RSA key!"
+				echo "$msg"
+				return 5
+			fi
+		fi
+	fi
+
+	getkeyuri_softhsm $slot
+	rc=$?
+	if [ $rc -ne 0 ]; then
+		teardown_softhsm
+	fi
+
+	return $rc
+}
+
+_getkeyuri_softhsm() {
+	local msg tokenuri keyuri
+
+	msg=$(p11tool --list-tokens 2>&1 | grep "token=${NAME}")
+	if [ $? -ne 0 ]; then
+		echo "Could not list existing tokens"
+		echo "$msg"
+		return 5
+	fi
+	tokenuri=$(echo "$msg" | sed -n 's/.*URL: \([[:print:]*]\)/\1/p')
+	if [ -z "$tokenuri" ]; then
+		echo "Could not get token URL"
+		echo "$msg"
+		return 6
+	fi
+	msg=$(p11tool --list-all ${tokenuri} 2>&1)
+	if [ $? -ne 0 ]; then
+		echo "Could not list object under token $tokenuri"
+		echo "$msg"
+		softhsm2-util --show-slots
+		return 7
+	fi
+
+	keyuri=$(echo "$msg" | sed -n 's/.*URL: \([[:print:]*]\)/\1/p')
+	if [ -z "$keyuri" ]; then
+		echo "Could not get key URL"
+		echo "$msg"
+		return 8
+	fi
+	echo "$keyuri"
+	return 0
+}
+
+getkeyuri_softhsm() {
+	local keyuri rc
+
+	keyuri=$(_getkeyuri_softhsm)
+	rc=$?
+	if [ $rc -ne 0 ]; then
+		return $rc
+	fi
+	echo "keyuri: $keyuri?pin-value=${PIN}&module-name=softhsm2"
+	return 0
+}
+
+getpubkey_softhsm() {
+	local keyuri rc
+
+	keyuri=$(_getkeyuri_softhsm)
+	rc=$?
+	if [ $rc -ne 0 ]; then
+		return $rc
+	fi
+	GNUTLS_PIN=${PIN} p11tool --export-pubkey "${keyuri}" --login 2>/dev/null
+	return $?
+}
+
+usage() {
+	cat <<_EOF_
+Usage: $0 [command]
+
+Supported commands are:
+
+setup      : Setup the user's account for softhsm and create a
+             token and key with a test configuration
+
+getkeyuri  : Get the key's URL; may only be called after setup
+
+getpubkey  : Get the public key in PEM format; may only be called after setup
+
+teardown   : Remove the temporary softhsm test configuration
+
+_EOF_
+}
+
+main() {
+	local ret
+
+	if [ $# -lt 1 ]; then
+		usage $0
+		echo -e "Missing command.\n\n"
+		return 1
+	fi
+	case "$1" in
+	setup)
+		setup_softhsm
+		ret=$?
+		;;
+	getkeyuri)
+		getkeyuri_softhsm
+		ret=$?
+		;;
+	getpubkey)
+		getpubkey_softhsm
+		ret=$?
+		;;
+	teardown)
+		teardown_softhsm
+		ret=$?
+		;;
+	*)
+		echo -e "Unsupported command: $1\n\n"
+		usage $0
+		ret=1
+	esac
+	return $ret
+}
+
+main "$@"
+exit $?
