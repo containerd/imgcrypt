@@ -87,12 +87,7 @@ var encryptCommand = cli.Command{
 			return err
 		}
 
-		opts, err := GetCryptoConfigOpts()
-		if err != nil {
-			return err
-		}
-
-		cc, err := CreateCryptoConfigWithOpts(context, descs, opts)
+		cc, err := CreateCryptoConfig(context, descs)
 		if err != nil {
 			return err
 		}

@@ -110,12 +110,7 @@ command. As part of this process, we do the following:
 			p = append(p, platforms.DefaultSpec())
 		}
 
-		ccopts, err := GetCryptoConfigOpts()
-		if err != nil {
-			return err
-		}
-
-		cc, err := CreateDecryptCryptoConfigWithOpts(context, nil, ccopts)
+		cc, err := CreateDecryptCryptoConfig(context, nil)
 		if err != nil {
 			return err
 		}

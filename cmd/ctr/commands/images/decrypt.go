@@ -83,12 +83,7 @@ var decryptCommand = cli.Command{
 			return nil
 		}
 
-		ccopts, err := GetCryptoConfigOpts()
-		if err != nil {
-			return err
-		}
-
-		cc, err := CreateDecryptCryptoConfigWithOpts(context, descs, ccopts)
+		cc, err := CreateDecryptCryptoConfig(context, descs)
 		if err != nil {
 			return err
 		}
