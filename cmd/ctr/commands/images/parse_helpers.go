@@ -25,18 +25,13 @@ import (
 
 	"github.com/containers/ocicrypt"
 	encconfig "github.com/containers/ocicrypt/config"
-	"github.com/containers/ocicrypt/crypto/pkcs11"
+	enchelpers "github.com/containers/ocicrypt/helpers"
 	encutils "github.com/containers/ocicrypt/utils"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 )
-
-// CryptoConfigOpts holds options needed for de- and encryption
-type CryptoConfigOpts struct {
-	Pkcs11Config *pkcs11.Pkcs11Config
-}
 
 // processRecipientKeys sorts the array of recipients by type. Recipients may be either
 // x509 certificates, public keys, or PGP public keys identified by email address or name
@@ -99,7 +94,7 @@ func processRecipientKeys(recipients []string) ([][]byte, [][]byte, [][]byte, []
 		}
 	}
 
-	if len(pkcs11Pubkeys) + len(pkcs11Yamls) > 0 {
+	if len(pkcs11Pubkeys)+len(pkcs11Yamls) > 0 {
 		fmt.Print("WARNING: Pkcs11 support is currently experimental and images encrypted with it will not be decryptable once it is production ready.\n")
 	}
 
@@ -215,7 +210,7 @@ func getGPGPrivateKeys(context *cli.Context, gpgSecretKeyRingFiles [][]byte, des
 // CreateDecryptCryptoConfig creates the CryptoConfig object that contains the necessary
 // information to perform decryption from command line options and possibly
 // LayerInfos describing the image and helping us to query for the PGP decryption keys
-func CreateDecryptCryptoConfigWithOpts(context *cli.Context, descs []ocispec.Descriptor, opts CryptoConfigOpts) (encconfig.CryptoConfig, error) {
+func CreateDecryptCryptoConfigWithOpts(context *cli.Context, descs []ocispec.Descriptor, opts enchelpers.CryptoConfigOpts) (encconfig.CryptoConfig, error) {
 	ccs := []encconfig.CryptoConfig{}
 
 	// x509 cert is needed for PKCS7 decryption
@@ -278,7 +273,7 @@ func CreateDecryptCryptoConfigWithOpts(context *cli.Context, descs []ocispec.Des
 
 // CreateCryptoConfigWithOpts from the list of recipient strings and list of key paths of private keys
 // The opts parameter holds options necessary for de- and encryption, such as when using pkcs11 for example.
-func CreateCryptoConfigWithOpts(context *cli.Context, descs []ocispec.Descriptor, opts CryptoConfigOpts) (encconfig.CryptoConfig, error) {
+func CreateCryptoConfigWithOpts(context *cli.Context, descs []ocispec.Descriptor, opts enchelpers.CryptoConfigOpts) (encconfig.CryptoConfig, error) {
 	recipients := context.StringSlice("recipient")
 	keys := context.StringSlice("key")
 
