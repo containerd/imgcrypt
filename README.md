@@ -1,4 +1,4 @@
-# imgcrypt image encryption library and command line lool
+# imgcrypt image encryption library and command line tool
 
 Project `imgcrypt` is a non-core subproject of containerd.
 
