@@ -38,6 +38,8 @@ type Pkcs11URI struct {
 	moduleDirectories []string
 	// file paths of allowed pkcs11 modules
 	allowedModulePaths []string
+	// whether any module is allowed to be loaded
+	allowAnyModule bool
 	// A map of environment variables needed by the pkcs11 module using this URI.
 	// This map is not needed by this implementation but is there for convenience.
 	env map[string]string
@@ -355,16 +357,20 @@ func (uri *Pkcs11URI) GetModuleDirectories() []string {
 	return uri.moduleDirectories
 }
 
-// SetAllowedModulePaths sets allowed module paths to restrict access to modules. By
-// default no filtering is done.
+// SetAllowedModulePaths sets allowed module paths to restrict access to modules.
 // Directory entries must end with a '/', all other ones are assumed to be file entries.
 // Allowed modules are filtered by string matching.
 func (uri *Pkcs11URI) SetAllowedModulePaths(allowedModulePaths []string) {
 	uri.allowedModulePaths = allowedModulePaths
 }
 
+// SetAllowAnyModule allows any module to be loaded; by default this is not allowed
+func (uri *Pkcs11URI) SetAllowAnyModule(allowAnyModule bool) {
+	uri.allowAnyModule = allowAnyModule
+}
+
 func (uri *Pkcs11URI) isAllowedPath(path string, allowedPaths []string) bool {
-	if len(allowedPaths) == 0 {
+	if uri.allowAnyModule {
 		return true
 	}
 	for _, allowedPath := range allowedPaths {
@@ -397,9 +403,12 @@ func (uri *Pkcs11URI) GetModule() (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("module-path '%s' is not accessible", v)
 		}
-		if err == nil && info.Mode().IsRegular() && uri.isAllowedPath(v, uri.allowedModulePaths) {
+		if err == nil && info.Mode().IsRegular() {
 			// it's a file
-			return v, nil
+			if uri.isAllowedPath(v, uri.allowedModulePaths) {
+				return v, nil
+			}
+			return "", fmt.Errorf("module-path '%s' is not allowed by policy", v)
 		}
 		if !info.IsDir() {
 			return "", fmt.Errorf("module-path '%s' points to an invalid file type", v)
@@ -436,6 +445,7 @@ func (uri *Pkcs11URI) GetModule() (string, error) {
 				if uri.isAllowedPath(f, uri.allowedModulePaths) {
 					return f, nil
 				}
+				return "", fmt.Errorf("module '%s' is not allowed by policy", f)
 			}
 		}
 	}

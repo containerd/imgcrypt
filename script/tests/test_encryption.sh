@@ -826,14 +826,7 @@ setupPKCS11() {
 	# Env. variable for softhsm_setup
 	export SOFTHSM_SETUP_CONFIGDIR=${WORKDIR}
 	# Env. variable for ctr-enc
-	export IMGCRYPT_CONFIG=${WORKDIR}/imgcrypt.conf
-
-	cat <<_EOF_ > ${IMGCRYPT_CONFIG}
-pkcs11:
-  module-directories:
-    - /usr/lib64/pkcs11/ # Fedora,RedHat,openSUSE
-    - /usr/lib/softhsm/  # Ubuntu,Debian,Alpine
-_EOF_
+	export OCICRYPT_CONFIG=internal
 	SOFTHSM_KEY=${WORKDIR}/softhsm_key.yaml
 
 	output=$(${SOFTHSM_SETUP} setup 2>&1)

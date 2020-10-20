@@ -25,6 +25,7 @@ import (
 
 	"github.com/containers/ocicrypt"
 	encconfig "github.com/containers/ocicrypt/config"
+	"github.com/containers/ocicrypt/config/pkcs11config"
 	"github.com/containers/ocicrypt/crypto/pkcs11"
 	encutils "github.com/containers/ocicrypt/utils"
 
@@ -32,11 +33,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 )
-
-// CryptoConfigOpts holds options needed for de- and encryption
-type CryptoConfigOpts struct {
-	Pkcs11Config *pkcs11.Pkcs11Config
-}
 
 // processRecipientKeys sorts the array of recipients by type. Recipients may be either
 // x509 certificates, public keys, or PGP public keys identified by email address or name
@@ -99,7 +95,7 @@ func processRecipientKeys(recipients []string) ([][]byte, [][]byte, [][]byte, []
 		}
 	}
 
-	if len(pkcs11Pubkeys) + len(pkcs11Yamls) > 0 {
+	if len(pkcs11Pubkeys)+len(pkcs11Yamls) > 0 {
 		fmt.Print("WARNING: Pkcs11 support is currently experimental and images encrypted with it will not be decryptable once it is production ready.\n")
 	}
 
@@ -215,7 +211,7 @@ func getGPGPrivateKeys(context *cli.Context, gpgSecretKeyRingFiles [][]byte, des
 // CreateDecryptCryptoConfig creates the CryptoConfig object that contains the necessary
 // information to perform decryption from command line options and possibly
 // LayerInfos describing the image and helping us to query for the PGP decryption keys
-func CreateDecryptCryptoConfigWithOpts(context *cli.Context, descs []ocispec.Descriptor, opts CryptoConfigOpts) (encconfig.CryptoConfig, error) {
+func CreateDecryptCryptoConfig(context *cli.Context, descs []ocispec.Descriptor) (encconfig.CryptoConfig, error) {
 	ccs := []encconfig.CryptoConfig{}
 
 	// x509 cert is needed for PKCS7 decryption
@@ -267,25 +263,31 @@ func CreateDecryptCryptoConfigWithOpts(context *cli.Context, descs []ocispec.Des
 	}
 	ccs = append(ccs, privKeysCc)
 
-	pkcs11PrivKeysCc, err := encconfig.DecryptWithPkcs11Yaml(opts.Pkcs11Config, pkcs11Yamls)
-	if err != nil {
-		return encconfig.CryptoConfig{}, err
+	if len(pkcs11Yamls) > 0 {
+		p11conf, err := pkcs11config.GetUserPkcs11Config()
+		if err != nil {
+			return encconfig.CryptoConfig{}, err
+		}
+
+		pkcs11PrivKeysCc, err := encconfig.DecryptWithPkcs11Yaml(p11conf, pkcs11Yamls)
+		if err != nil {
+			return encconfig.CryptoConfig{}, err
+		}
+		ccs = append(ccs, pkcs11PrivKeysCc)
 	}
-	ccs = append(ccs, pkcs11PrivKeysCc)
 
 	return encconfig.CombineCryptoConfigs(ccs), nil
 }
 
-// CreateCryptoConfigWithOpts from the list of recipient strings and list of key paths of private keys
-// The opts parameter holds options necessary for de- and encryption, such as when using pkcs11 for example.
-func CreateCryptoConfigWithOpts(context *cli.Context, descs []ocispec.Descriptor, opts CryptoConfigOpts) (encconfig.CryptoConfig, error) {
+// CreateCryptoConfig from the list of recipient strings and list of key paths of private keys
+func CreateCryptoConfig(context *cli.Context, descs []ocispec.Descriptor) (encconfig.CryptoConfig, error) {
 	recipients := context.StringSlice("recipient")
 	keys := context.StringSlice("key")
 
 	var decryptCc *encconfig.CryptoConfig
 	ccs := []encconfig.CryptoConfig{}
 	if len(keys) > 0 {
-		dcc, err := CreateDecryptCryptoConfigWithOpts(context, descs, opts)
+		dcc, err := CreateDecryptCryptoConfig(context, descs)
 		if err != nil {
 			return encconfig.CryptoConfig{}, err
 		}
@@ -329,7 +331,14 @@ func CreateCryptoConfigWithOpts(context *cli.Context, descs []ocispec.Descriptor
 		}
 		encryptCcs = append(encryptCcs, jweCc)
 
-		pkcs11Cc, err := encconfig.EncryptWithPkcs11(opts.Pkcs11Config, pkcs11Pubkeys, pkcs11Yamls)
+		var p11conf *pkcs11.Pkcs11Config
+		if len(pkcs11Yamls) > 0 {
+			p11conf, err = pkcs11config.GetUserPkcs11Config()
+			if err != nil {
+				return encconfig.CryptoConfig{}, err
+			}
+		}
+		pkcs11Cc, err := encconfig.EncryptWithPkcs11(p11conf, pkcs11Pubkeys, pkcs11Yamls)
 		if err != nil {
 			return encconfig.CryptoConfig{}, err
 		}

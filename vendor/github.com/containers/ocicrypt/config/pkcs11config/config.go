@@ -14,25 +14,30 @@
    limitations under the License.
 */
 
-package images
+package pkcs11config
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
 
 	"github.com/containers/ocicrypt/crypto/pkcs11"
+	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )
 
-// ImgcryptoConfig represents the format of an imgcrypt.conf config file
-type ImgcryptConfig struct {
+// OcicryptConfig represents the format of an imgcrypt.conf config file
+type OcicryptConfig struct {
 	Pkcs11Config pkcs11.Pkcs11Config `yaml:"pkcs11"`
 }
 
+const CONFIGFILE = "ocicrypt.conf"
+const ENVVARNAME = "OCICRYPT_CONFIG"
+
 // parseConfigFile parses a configuration file; it is not an error if the configuration file does
 // not exist, so no error is returned.
-func parseConfigFile(filename string) (*ImgcryptConfig, error) {
+func parseConfigFile(filename string) (*OcicryptConfig, error) {
 	// a non-existent config file is not an error
 	_, err := os.Stat(filename)
 	if os.IsNotExist(err) {
@@ -44,68 +49,68 @@ func parseConfigFile(filename string) (*ImgcryptConfig, error) {
 		return nil, err
 	}
 
-	ic := &ImgcryptConfig{}
+	ic := &OcicryptConfig{}
 	err = yaml.Unmarshal(data, ic)
 	return ic, err
 }
 
 // getConfiguration tries to read the configuration file at the following locations
-// 1) environment variable IMGCRYPT_CONFIG
-// 2) environment variable XDG_CONFIG_HOME/imgcrypt.conf
-// 3) environment variable HOME/.config/imgcrypt.conf
-// 4) /etc/imgcrypt.conf
+// 1) ${OCICRYPT_CONFIG} == "internal": use internal default allow-all policy
+// 2) ${OCICRYPT_CONFIG}
+// 3) ${XDG_CONFIG_HOME}/ocicrypt-pkcs11.conf
+// 4) ${HOME}/.config/ocicrypt-pkcs11.conf
+// 5) /etc/ocicrypt-pkcs11.conf
 // If no configuration file could be found or read a null pointer is returned
-func getConfiguration() (*ImgcryptConfig, error) {
-	filename := os.Getenv("IMGCRYPT_CONFIG")
+func getConfiguration() (*OcicryptConfig, error) {
+	filename := os.Getenv(ENVVARNAME)
 	if len(filename) > 0 {
+		if filename == "internal" {
+			return getDefaultCryptoConfigOpts()
+		}
 		ic, err := parseConfigFile(filename)
 		if err != nil || ic != nil {
-			return ic, nil
+			return ic, err
 		}
 	}
 	envvar := os.Getenv("XDG_CONFIG_HOME")
 	if len(envvar) > 0 {
-		ic, err := parseConfigFile(path.Join(envvar, "imgcrypt.conf"))
+		ic, err := parseConfigFile(path.Join(envvar, CONFIGFILE))
 		if err != nil || ic != nil {
-			return ic, nil
+			return ic, err
 		}
 	}
 	envvar = os.Getenv("HOME")
 	if len(envvar) > 0 {
-		ic, err := parseConfigFile(path.Join(envvar, ".config", "imgcrypt.conf"))
+		ic, err := parseConfigFile(path.Join(envvar, ".config", CONFIGFILE))
 		if err != nil || ic != nil {
-			return ic, nil
+			return ic, err
 		}
 	}
-	return parseConfigFile(path.Join("etc", "imgcrypt.conf"))
+	return parseConfigFile(path.Join("etc", CONFIGFILE))
 }
 
 // getDefaultCryptoConfigOpts returns default crypto config opts needed for pkcs11 module access
-func getDefaultCryptoConfigOpts() (CryptoConfigOpts, error) {
-	config := `module-directories:
- - /usr/lib64/pkcs11/  # Fedora,RedHat,openSUSE
- - /usr/lib/softhsm/   # Ubuntu,Debian,Alpine
-`
+func getDefaultCryptoConfigOpts() (*OcicryptConfig, error) {
+	mdyaml := pkcs11.GetDefaultModuleDirectoriesYaml("")
+	config := fmt.Sprintf("module-directories:\n"+
+		"%s"+
+		"allowed-module-paths:\n"+
+		"%s", mdyaml, mdyaml)
 	p11conf, err := pkcs11.ParsePkcs11ConfigFile([]byte(config))
-	if err != nil {
-		return CryptoConfigOpts{}, err
-	}
-	return CryptoConfigOpts{
-		Pkcs11Config: p11conf,
-	}, nil
+	return &OcicryptConfig{
+		Pkcs11Config: *p11conf,
+	}, err
 }
 
-// GetCryptoConfigOpts gets the CryptoConfigOpts either from a configuration file or if none is
+// GetUserPkcs11Config gets the user's Pkcs11Conig either from a configuration file or if none is
 // found the default ones are returned
-func GetCryptoConfigOpts() (CryptoConfigOpts, error) {
+func GetUserPkcs11Config() (*pkcs11.Pkcs11Config, error) {
 	ic, err := getConfiguration()
 	if err != nil {
-		return CryptoConfigOpts{}, err
+		return &pkcs11.Pkcs11Config{}, err
 	}
 	if ic == nil {
-		return getDefaultCryptoConfigOpts()
+		return &pkcs11.Pkcs11Config{}, errors.New("No ocicrypt config file was found")
 	}
-	return CryptoConfigOpts{
-		Pkcs11Config: &ic.Pkcs11Config,
-	}, nil
+	return &ic.Pkcs11Config, nil
 }

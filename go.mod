@@ -13,7 +13,7 @@ require (
 	github.com/containerd/go-runc v0.0.0-20190911050354-e029b79d8cda // indirect
 	github.com/containerd/ttrpc v0.0.0-20190828172938-92c8520ef9f8 // indirect
 	github.com/containerd/typeurl v0.0.0-20180627222232-a93fcdb778cd
-	github.com/containers/ocicrypt v1.0.4-0.20200924153919-77bf1d8be613
+	github.com/containers/ocicrypt v1.0.4-0.20201019210254-ee875c9741e7
 	github.com/coreos/go-systemd v0.0.0-20161114122254-48702e0da86b // indirect
 	github.com/docker/distribution v2.7.1-0.20190205005809-0d3efadf0154+incompatible // indirect
 	github.com/docker/go-events v0.0.0-20170721190031-9461782956ad // indirect

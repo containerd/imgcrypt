@@ -134,13 +134,8 @@ If foobar.tar contains an OCI ref named "latest" and anonymous ref "sha256:deadb
 			return closeErr
 		}
 
-		ccopts, err := GetCryptoConfigOpts()
-		if err != nil {
-			return err
-		}
-
 		if !context.Bool("no-unpack") {
-			cc, err := CreateDecryptCryptoConfigWithOpts(context, nil, ccopts)
+			cc, err := CreateDecryptCryptoConfig(context, nil)
 			if err != nil {
 				return err
 			}

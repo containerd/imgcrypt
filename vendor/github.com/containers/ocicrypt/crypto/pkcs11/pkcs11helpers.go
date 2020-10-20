@@ -1,3 +1,5 @@
+// +build cgo
+
 /*
    Copyright The ocicrypt Authors.
 
@@ -32,7 +34,6 @@ import (
 	"github.com/miekg/pkcs11"
 	"github.com/pkg/errors"
 	pkcs11uri "github.com/stefanberger/go-pkcs11uri"
-	"gopkg.in/yaml.v2"
 )
 
 var (
@@ -56,90 +57,6 @@ var (
 		SourceData: OAEPLabel,
 	}
 )
-
-// Pkcs11KeyFile describes the format of the pkcs11 (private) key file.
-// It also carries pkcs11 module related environment variables that are transferred to the
-// Pkcs11URI object and activated when the pkcs11 module is used.
-type Pkcs11KeyFile struct {
-	Pkcs11 struct {
-		Uri string `yaml:"uri"`
-	} `yaml:"pkcs11"`
-	Module struct {
-		Env map[string]string `yaml:"env,omitempty"`
-	} `yaml:"module"`
-}
-
-// Pkcs11KeyFileObject is a representation of the Pkcs11KeyFile with the pkcs11 URI as an object
-type Pkcs11KeyFileObject struct {
-	Uri *pkcs11uri.Pkcs11URI
-}
-
-// ParsePkcs11Uri parses a pkcs11 URI
-func ParsePkcs11Uri(uri string) (*pkcs11uri.Pkcs11URI, error) {
-	p11uri := pkcs11uri.New()
-	err := p11uri.Parse(uri)
-	if err != nil {
-		return nil, errors.Wrapf(err, "Could not parse Pkcs11URI from file")
-	}
-	return p11uri, err
-}
-
-// ParsePkcs11KeyFile parses a pkcs11 key file holding a pkcs11 URI describing a private key.
-// The file has the following yaml format:
-// pkcs11:
-//  - uri : <pkcs11 uri>
-// An error is returned if the pkcs11 URI is malformed
-func ParsePkcs11KeyFile(yamlstr []byte) (*Pkcs11KeyFileObject, error) {
-	p11keyfile := Pkcs11KeyFile{}
-
-	err := yaml.Unmarshal([]byte(yamlstr), &p11keyfile)
-	if err != nil {
-		return nil, errors.Wrapf(err, "Could not unmarshal pkcs11 keyfile")
-	}
-
-	p11uri, err := ParsePkcs11Uri(p11keyfile.Pkcs11.Uri)
-	if err != nil {
-		return nil, err
-	}
-	p11uri.SetEnvMap(p11keyfile.Module.Env)
-
-	return &Pkcs11KeyFileObject{Uri: p11uri}, err
-}
-
-// IsPkcs11PrivateKey checks whether the given YAML represents a Pkcs11 private key
-func IsPkcs11PrivateKey(yamlstr []byte) bool {
-	_, err := ParsePkcs11KeyFile(yamlstr)
-	return err == nil
-}
-
-// IsPkcs11PublicKey checks whether the given YAML represents a Pkcs11 public key
-func IsPkcs11PublicKey(yamlstr []byte) bool {
-	_, err := ParsePkcs11KeyFile(yamlstr)
-	return err == nil
-}
-
-// Pkcs11Config describes the layout of a pkcs11 config file
-// The file has the following yaml format:
-// module-directories:
-// - /usr/lib64/pkcs11/
-// allowd-module-paths
-// - /usr/lib64/pkcs11/libsofthsm2.so
-type Pkcs11Config struct {
-	ModuleDirectories  []string `yaml:"module-directories"`
-	AllowedModulePaths []string `yaml:"allowed-module-paths"`
-}
-
-// ParsePkcs11ConfigFile parses a pkcs11 config file hat influences the module search behavior
-// as well as the set of modules that users are allowed to use
-func ParsePkcs11ConfigFile(yamlstr []byte) (*Pkcs11Config, error) {
-	p11conf := Pkcs11Config{}
-
-	err := yaml.Unmarshal([]byte(yamlstr), &p11conf)
-	if err != nil {
-		return &p11conf, errors.Wrapf(err, "Could not parse Pkcs11Config")
-	}
-	return &p11conf, nil
-}
 
 // rsaPublicEncryptOAEP encrypts the given plaintext with the given *rsa.PublicKey; the
 // environment variable OCICRYPT_OAEP_HASHALG can be set to 'sha1' to force usage of sha1 for OAEP (SoftHSM).
@@ -339,7 +256,10 @@ func findObject(p11ctx *pkcs11.Ctx, session pkcs11.SessionHandle, class uint, ke
 
 // publicEncryptOAEP uses a public key described by a pkcs11 URI to OAEP encrypt the given plaintext
 func publicEncryptOAEP(pubKey *Pkcs11KeyFileObject, plaintext []byte) ([]byte, string, error) {
-	oldenv := setEnvVars(pubKey.Uri.GetEnvMap())
+	oldenv, err := setEnvVars(pubKey.Uri.GetEnvMap())
+	if err != nil {
+		return nil, "", err
+	}
 	defer restoreEnv(oldenv)
 
 	p11ctx, session, err := pkcs11UriLogin(pubKey.Uri, false)
@@ -388,7 +308,10 @@ func publicEncryptOAEP(pubKey *Pkcs11KeyFileObject, plaintext []byte) ([]byte, s
 
 // privateDecryptOAEP uses a pkcs11 URI describing a private key to OAEP decrypt a ciphertext
 func privateDecryptOAEP(privKeyObj *Pkcs11KeyFileObject, ciphertext []byte, hashalg string) ([]byte, error) {
-	oldenv := setEnvVars(privKeyObj.Uri.GetEnvMap())
+	oldenv, err := setEnvVars(privKeyObj.Uri.GetEnvMap())
+	if err != nil {
+		return nil, err
+	}
 	defer restoreEnv(oldenv)
 
 	p11ctx, session, err := pkcs11UriLogin(privKeyObj.Uri, true)

@@ -75,19 +75,27 @@ func EncryptWithGpg(gpgRecipients [][]byte, gpgPubRingFile []byte) (CryptoConfig
 
 // EncryptWithPkcs11 returns a CryptoConfig to encrypt with configured pkcs11 parameters
 func EncryptWithPkcs11(pkcs11Config *pkcs11.Pkcs11Config, pkcs11Pubkeys, pkcs11Yamls [][]byte) (CryptoConfig, error) {
-	p11confYaml, err := yaml.Marshal(pkcs11Config)
-	if err != nil {
-		return CryptoConfig{}, errors.Wrapf(err, "Could not marshal Pkcs11Config to Yaml")
-	}
+	dc := DecryptConfig{}
+	ep := map[string][][]byte{}
 
-	dc := DecryptConfig{
-		Parameters: map[string][][]byte{
-			"pkcs11-config": {p11confYaml},
-		},
+	if len(pkcs11Yamls) > 0 {
+		if pkcs11Config == nil {
+			return CryptoConfig{}, errors.New("pkcs11Config must not be nil")
+		}
+		p11confYaml, err := yaml.Marshal(pkcs11Config)
+		if err != nil {
+			return CryptoConfig{}, errors.Wrapf(err, "Could not marshal Pkcs11Config to Yaml")
+		}
+
+		dc = DecryptConfig{
+			Parameters: map[string][][]byte{
+				"pkcs11-config": {p11confYaml},
+			},
+		}
+		ep["pkcs11-yamls"] = pkcs11Yamls
 	}
-	ep := map[string][][]byte{
-		"pkcs11-pubkeys": pkcs11Pubkeys,
-		"pkcs11-yamls":   pkcs11Yamls,
+	if len(pkcs11Pubkeys) > 0 {
+		ep["pkcs11-pubkeys"] = pkcs11Pubkeys
 	}
 
 	return CryptoConfig{
