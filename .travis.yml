@@ -7,7 +7,7 @@ go:
 env:
   global:
     - RUNC_VERSION=v1.0.0-rc9
-    - GOLANGCI_LINT_VERSION=v1.22.2
+    - GOLANGCI_LINT_VERSION=v1.32.2
 
 addons:
   apt:
