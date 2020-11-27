@@ -317,7 +317,7 @@ func cryptChildren(ctx context.Context, cs content.Store, desc ocispec.Descripto
 			Layers: newLayers,
 		}
 
-		mb, err := json.MarshalIndent(newManifest, "", "   ")
+		mb, err := json.Marshal(newManifest)
 		if err != nil {
 			return ocispec.Descriptor{}, false, errors.Wrap(err, "failed to marshal image")
 		}
