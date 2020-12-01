@@ -178,7 +178,7 @@ func LabelArgs(labelStrings []string) map[string]string {
 
 // PrintAsJSON prints input in JSON format
 func PrintAsJSON(x interface{}) {
-	b, err := json.MarshalIndent(x, "", "    ")
+	b, err := json.Marshal(x)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "can't marshal %+v as a JSON string: %v\n", x, err)
 	}
