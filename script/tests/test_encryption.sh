@@ -159,11 +159,14 @@ failExit() {
 }
 
 pullImages() {
+	if [ -z "$IMAGE_PULL_CREDS" ]; then
+		echo "Note: Image pull credentials can be passed with env. variable IMAGE_PULL_CREDS=<username>:<password>"
+	fi
 	$CTR images rm --sync ${ALPINE_ENC} ${ALPINE_DEC} ${NGINX_ENC} ${NGINX_DEC} &>/dev/null
-	$CTR images pull --all-platforms ${ALPINE} &>/dev/null
+	$CTR images pull ${IMAGE_PULL_CREDS:+--user ${IMAGE_PULL_CREDS}} --all-platforms ${ALPINE} &>/dev/null
 	failExit $? "Image pull failed on ${ALPINE}"
 
-	$CTR images pull --platform linux/amd64 ${NGINX} &>/dev/null
+	$CTR images pull ${IMAGE_PULL_CREDS:+--user ${IMAGE_PULL_CREDS}} --platform linux/amd64 ${NGINX} &>/dev/null
 	failExit $? "Image pull failed on ${NGINX}"
 
 	LAYER_INFO_ALPINE="$($CTR images layerinfo ${ALPINE})"
