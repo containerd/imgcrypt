@@ -18,6 +18,7 @@ package config
 
 import (
 	"github.com/containers/ocicrypt/crypto/pkcs11"
+	"strings"
 
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
@@ -98,6 +99,54 @@ func EncryptWithPkcs11(pkcs11Config *pkcs11.Pkcs11Config, pkcs11Pubkeys, pkcs11Y
 		ep["pkcs11-pubkeys"] = pkcs11Pubkeys
 	}
 
+	return CryptoConfig{
+		EncryptConfig: &EncryptConfig{
+			Parameters:    ep,
+			DecryptConfig: dc,
+		},
+		DecryptConfig: &dc,
+	}, nil
+}
+
+// EncryptWithKeyProvider returns a CryptoConfig to encrypt with configured keyprovider parameters
+func EncryptWithKeyProvider(keyProviders [][]byte) (CryptoConfig, error) {
+	dc := DecryptConfig{}
+	ep := make(map[string][][]byte)
+	for _, keyProvider := range keyProviders {
+		keyProvidersStr := string(keyProvider)
+		idx := strings.Index(keyProvidersStr, ":")
+		if idx > 0 {
+			ep[keyProvidersStr[:idx]] = append(ep[keyProvidersStr[:idx]], []byte(keyProvidersStr[idx+1:]))
+		} else {
+			ep[keyProvidersStr] = append(ep[keyProvidersStr], []byte("Enabled"))
+		}
+	}
+
+	return CryptoConfig{
+		EncryptConfig: &EncryptConfig{
+			Parameters:    ep,
+			DecryptConfig: dc,
+		},
+		DecryptConfig: &dc,
+	}, nil
+}
+
+// DecryptWithKeyProvider returns a CryptoConfig to decrypt with configured keyprovider parameters
+func DecryptWithKeyProvider(keyProviders [][]byte) (CryptoConfig, error) {
+	dp := make(map[string][][]byte)
+	ep := map[string][][]byte{}
+	for _, keyProvider := range keyProviders {
+		keyProvidersStr := string(keyProvider)
+		idx := strings.Index(keyProvidersStr, ":")
+		if idx > 0 {
+			dp[keyProvidersStr[:idx]] = append(dp[keyProvidersStr[:idx]], []byte(keyProvidersStr[idx+1:]))
+		} else {
+			dp[keyProvidersStr] = append(dp[keyProvidersStr], []byte("Enabled"))
+		}
+	}
+	dc := DecryptConfig{
+		Parameters: dp,
+	}
 	return CryptoConfig{
 		EncryptConfig: &EncryptConfig{
 			Parameters:    ep,

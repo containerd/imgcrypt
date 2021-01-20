@@ -95,10 +95,6 @@ func processRecipientKeys(recipients []string) ([][]byte, [][]byte, [][]byte, []
 		}
 	}
 
-	if len(pkcs11Pubkeys)+len(pkcs11Yamls) > 0 {
-		fmt.Print("WARNING: Pkcs11 support is currently experimental and images encrypted with it will not be decryptable once it is production ready.\n")
-	}
-
 	return gpgRecipients, pubkeys, x509s, pkcs11Pubkeys, pkcs11Yamls, nil
 }
 

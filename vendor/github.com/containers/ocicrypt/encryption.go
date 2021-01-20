@@ -20,6 +20,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	keyproviderconfig "github.com/containers/ocicrypt/config/keyprovider-config"
+	"github.com/containers/ocicrypt/keywrap/keyprovider"
 	"io"
 	"strings"
 
@@ -31,6 +33,7 @@ import (
 	"github.com/containers/ocicrypt/keywrap/pkcs11"
 	"github.com/containers/ocicrypt/keywrap/pkcs7"
 	"github.com/opencontainers/go-digest"
+	log "github.com/sirupsen/logrus"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
 )
@@ -46,6 +49,14 @@ func init() {
 	RegisterKeyWrapper("jwe", jwe.NewKeyWrapper())
 	RegisterKeyWrapper("pkcs7", pkcs7.NewKeyWrapper())
 	RegisterKeyWrapper("pkcs11", pkcs11.NewKeyWrapper())
+	ic, err := keyproviderconfig.GetConfiguration()
+	if err != nil {
+		log.Error(err)
+	} else if ic != nil {
+		for provider, attrs := range ic.KeyProviderConfig {
+			RegisterKeyWrapper("provider."+provider, keyprovider.NewKeyWrapper(provider, attrs))
+		}
+	}
 }
 
 var keyWrappers map[string]keywrap.KeyWrapper
@@ -131,6 +142,7 @@ func EncryptLayer(ec *config.EncryptConfig, encOrPlainLayerReader io.Reader, des
 		}
 
 		newAnnotations := make(map[string]string)
+		keysWrapped := false
 		for annotationsID, scheme := range keyWrapperAnnotations {
 			b64Annotations := desc.Annotations[annotationsID]
 			keywrapper := GetKeyWrapper(scheme)
@@ -139,10 +151,14 @@ func EncryptLayer(ec *config.EncryptConfig, encOrPlainLayerReader io.Reader, des
 				return nil, err
 			}
 			if b64Annotations != "" {
+				keysWrapped = true
 				newAnnotations[annotationsID] = b64Annotations
 			}
 		}
 
+		if !keysWrapped {
+			return nil, errors.New("no wrapped keys produced by encryption")
+		}
 		newAnnotations["org.opencontainers.image.enc.pubopts"] = base64.StdEncoding.EncodeToString(pubOptsData)
 
 		if len(newAnnotations) == 0 {
@@ -207,7 +223,6 @@ func decryptLayerKeyOptsData(dc *config.DecryptConfig, desc ocispec.Descriptor) 
 			if len(keywrapper.GetPrivateKeys(dc.Parameters)) > 0 {
 				privKeyGiven = true
 			}
-
 			optsData, err := preUnwrapKey(keywrapper, dc, b64Annotation)
 			if err != nil {
 				// try next keywrap.KeyWrapper
