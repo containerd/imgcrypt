@@ -899,13 +899,14 @@ testPKCS11() {
 	echo
 }
 
-testPGPandJWEandPKCS7andPKCS11() {
+testPGPandJWEandPKCS7andPKCS11andKeyprovider() {
 	local ctr
 
 	createJWEKeys
 	setupPGP
 	setupPKCS7
 	setupPKCS11
+	setupKeyprovider
 
 	# Env. variable needed for encryption with SOFTHSM_KEY_PEM
 	export OCICRYPT_OAEP_HASHALG=sha1
@@ -950,7 +951,8 @@ testPGPandJWEandPKCS7andPKCS11() {
 			pgp:testkey2@key.org \
 			jwe:${PUBKEY2PEM} \
 			pkcs7:${CLIENTCERT} pkcs7:${CLIENT2CERT} \
-			pkcs11:${SOFTHSM_KEY} pkcs11:${SOFTHSM_KEY_PEM}; do
+			pkcs11:${SOFTHSM_KEY} pkcs11:${SOFTHSM_KEY_PEM} \
+			${KEYPROVIDER:+provider:testkeyprovider:123}; do
 		$CTR images encrypt \
 			--gpg-homedir ${GPGHOMEDIR} \
 			--gpg-version 2 \
@@ -972,11 +974,14 @@ testPGPandJWEandPKCS7andPKCS11() {
 		elif [ $ctr -lt 5 ]; then
 			diff <(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $5}' | sort | uniq | tr -d '\n') \
 				<(echo -n "ENCRYPTIONjwe,pgp,pkcs7")
-		else
+		elif [ $ctr -lt 7 ]; then
 			diff <(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $5}' | sort | uniq | tr -d '\n') \
 				<(echo -n "ENCRYPTIONjwe,pgp,pkcs11,pkcs7")
+		else
+			diff <(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $5}' | sort | uniq | tr -d '\n') \
+				<(echo -n "ENCRYPTIONjwe,pgp,pkcs11,pkcs7,provider.testkeyprovider")
 		fi
-		failExit $? "Image layerinfo on JWE encrypted image shows unexpected encryption (ctr=$ctr)"
+		failExit $? "Image layerinfo on multi-recipient-encrypted image shows unexpected encryption (ctr=$ctr)"
 		ctr=$((ctr + 1))
 	done
 
@@ -1053,6 +1058,23 @@ testPGPandJWEandPKCS7andPKCS11() {
 		echo "PKCS11 Decryption with ${privkey} worked."
 	done
 
+	# and if KEYPROVIDER is set, also try provider:
+	for keyprovider in ${KEYPROVIDER:+provider:testkeyprovider:123}; do
+		$CTR images decrypt \
+			--key ${keyprovider} \
+			${ALPINE_ENC} ${ALPINE_DEC}
+		failExit $? "Image decryption with keyprovider failed: private key: ${keyprovider}"
+
+		LAYER_INFO_ALPINE_DEC="$($CTR images layerinfo ${ALPINE_DEC})"
+		failExit $? "Image layerinfo on decrypted image failed (keyprovider)"
+
+		diff <(echo "${LAYER_INFO_ALPINE}") <(echo "${LAYER_INFO_ALPINE_DEC}")
+		failExit $? "Image layerinfos are different (keyprovider)"
+
+		$CTR images rm --sync ${ALPINE_DEC} &>/dev/null
+		echo "keyprovider Decryption with ${keyprovider} worked."
+	done
+
 	$CTR images rm --sync ${ALPINE_DEC} ${ALPINE_ENC} &>/dev/null
 
 	echo "Testing adding first JWE and then PGP and PKCS7 and PKCS11 recipients"
@@ -1095,11 +1117,118 @@ testPGPandJWEandPKCS7andPKCS11() {
 		ctr=$((ctr + 1))
 	done
 
-	echo "PASS: Test with JWE, PGP, PKCS7, and PKCS11 recipients"
+	echo "PASS: Test with ${KEYPROVIDER:+keyprovider, }JWE, PGP, PKCS7, and PKCS11 recipients"
 	echo
 
 	$CTR images rm --sync ${ALPINE_DEC} ${ALPINE_ENC} &>/dev/null
 }
+
+setupKeyprovider() {
+	if [ -z "${KEYPROVIDER}" ]; then
+		return
+	fi
+	export OCICRYPT_KEYPROVIDER_CONFIG=${WORKDIR}/ocicrypt-keyprovider.conf
+
+	cat <<_EOF_ >${OCICRYPT_KEYPROVIDER_CONFIG}
+{
+  "key-providers": {
+    "testkeyprovider": {
+      "cmd": {
+        "path": "${KEYPROVIDER}",
+        "args": []
+      }
+    }
+  }
+}
+_EOF_
+}
+
+testKeyprovider() {
+	if [ -z "${KEYPROVIDER}" ]; then
+		echo "Skipping keyprovider test; require KEYPROVIDER to point to executable"
+		return 0
+	fi
+
+	createJWEKeys
+	setupPGP
+	setupPKCS7
+	setupPKCS11
+	setupKeyprovider
+
+	echo "Testing keyprovider using '${KEYPROVIDER}'"
+
+	echo "Testing large recpient list"
+
+	$CTR images encrypt \
+		--recipient provider:testkeyprovider:foobar \
+		${ALPINE} ${ALPINE_ENC}
+	failExit $? "Image encryption with keyprovider failed"
+
+	LAYER_INFO_ALPINE_ENC="$($CTR images layerinfo ${ALPINE_ENC})"
+	failExit $? "Image layerinfo on keyprovider-encrypted image failed"
+	diff <(echo "${LAYER_INFO_ALPINE}" | gawk '{print $3}') \
+		<(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $3}')
+	failExit $? "Image layerinfo on keyprovider encrypted image shows differences in architectures"
+
+	diff <(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $5}' | sort | uniq | tr -d '\n') \
+		<(echo -n "ENCRYPTIONprovider.testkeyprovider")
+	failExit $? "Image layerinfo on keyprovider encrypted image shows unexpected encryption"
+
+	MSG=$(sudo $CTR container create ${ALPINE_ENC} --skip-decrypt-auth --key provider:testkeyprovider:xyz testcontainer1 2>&1)
+
+	failExit $? "Should have been able to create a container from encrypted (keyprovider)\n${MSG}"
+
+	$CTR images decrypt \
+		--key provider:testkeyprovider:123 \
+		${ALPINE_ENC} ${ALPINE_DEC}
+	failExit $? "Image decryption with keyprovider failed"
+
+	LAYER_INFO_ALPINE_DEC="$($CTR images layerinfo ${ALPINE_DEC})"
+	failExit $? "Image layerinfo on decrypted image failed (keyprovider)"
+
+	diff <(echo "${LAYER_INFO_ALPINE}") <(echo "${LAYER_INFO_ALPINE_DEC}")
+	failExit $? "Image layerinfos are different (keyprovider)"
+
+	$CTR images rm --sync ${ALPINE_ENC} ${ALPINE_DEC} &>/dev/null
+	echo "Decryption with keyprovider worked."
+
+	echo "PASS: keyprovider type of encryption"
+	echo
+
+	createJWEKeys
+	setupPGP
+	setupPKCS7
+	setupPKCS11
+
+	echo "Testing large recpient list"
+	$CTR images encrypt \
+		--gpg-homedir ${GPGHOMEDIR} \
+		--gpg-version 2 \
+		--recipient pgp:testkey1@key.org \
+		--recipient pgp:testkey2@key.org \
+		--recipient jwe:${PUBKEYPEM} \
+		--recipient jwe:${PUBKEY2PEM} \
+		--recipient pkcs7:${CLIENTCERT} \
+		--recipient pkcs7:${CLIENT2CERT} \
+		--recipient pkcs11:${SOFTHSM_KEY} \
+		--recipient pkcs11:${SOFTHSM_KEY_PEM} \
+		--recipient provider:testkeyprovider:foobar \
+		${ALPINE} ${ALPINE_ENC}
+	failExit $? "Image encryption to many different recipients failed"
+	LAYER_INFO_ALPINE_ENC="$($CTR images layerinfo ${ALPINE_ENC})"
+	failExit $? "Image layerinfo on multi-recipient encrypted image failed; public key: ${recipient}"
+
+	diff <(echo "${LAYER_INFO_ALPINE}" | gawk '{print $3}') \
+		<(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $3}')
+	failExit $? "Image layerinfo on multi-recipient encrypted image shows differences in architectures"
+
+	diff <(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $5}' | sort | uniq | tr -d '\n') \
+		<(echo -n "ENCRYPTIONjwe,pgp,pkcs11,pkcs7,provider.testkeyprovider")
+
+	$CTR images rm --sync ${ALPINE_ENC} &>/dev/null
+	echo "Encryption to multiple different types of recipients worked."
+}
+
 
 # Test containerd with flow where keys are passed in via containerd API
 setup
@@ -1109,7 +1238,8 @@ testPGP
 testJWE
 testPKCS7
 testPKCS11
-testPGPandJWEandPKCS7andPKCS11
+testPGPandJWEandPKCS7andPKCS11andKeyprovider
+testKeyprovider
 cleanup
 
 # Test containerd with flow where keys are in local directory
