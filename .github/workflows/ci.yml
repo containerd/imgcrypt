@@ -138,3 +138,32 @@ jobs:
           make test
           make
         working-directory: src/github.com/containerd/imgcrypt
+
+  windows-mingw:
+    name: Windows Tests
+    runs-on: windows-2019
+    timeout-minutes: 15
+    needs: [linters, checks]
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          path: src/github.com/containerd/imgcrypt
+
+      - uses: actions/setup-go@v2
+        with:
+          go-version: 1.16
+
+      - name: Set env
+        shell: bash
+        run: |
+          echo "GOPATH=${{ github.workspace }}" >> $GITHUB_ENV
+          echo "${{ github.workspace }}/bin" >> $GITHUB_PATH
+
+      - name: Make
+        env:
+          CGO_ENABLED: 1
+        run: |
+          mingw32-make test
+          mingw32-make
+        working-directory: src/github.com/containerd/imgcrypt
