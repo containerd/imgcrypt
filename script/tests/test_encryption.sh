@@ -1143,6 +1143,11 @@ setupKeyprovider() {
 _EOF_
 }
 
+testKeyproviderInvalidPath() {
+    export OCICRYPT_KEYPROVIDER_CONFIG=/path/to/nowhere
+    testJWE
+}
+
 testKeyprovider() {
 	if [ -z "${KEYPROVIDER}" ]; then
 		echo "Skipping keyprovider test; require KEYPROVIDER to point to executable"
@@ -1240,6 +1245,7 @@ testPKCS7
 testPKCS11
 testPGPandJWEandPKCS7andPKCS11andKeyprovider
 testKeyprovider
+testKeyproviderInvalidPath
 cleanup
 
 # Test containerd with flow where keys are in local directory
