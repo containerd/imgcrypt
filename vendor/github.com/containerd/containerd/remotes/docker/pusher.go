@@ -52,7 +52,7 @@ func (p dockerPusher) Push(ctx context.Context, desc ocispec.Descriptor) (conten
 	ref := remotes.MakeRefKey(ctx, desc)
 	status, err := p.tracker.GetStatus(ref)
 	if err == nil {
-		if status.Offset == status.Total {
+		if status.Committed && status.Offset == status.Total {
 			return nil, errors.Wrapf(errdefs.ErrAlreadyExists, "ref %v", ref)
 		}
 		// TODO: Handle incomplete status
@@ -341,8 +341,6 @@ func (pw *pushWriter) Commit(ctx context.Context, size int64, expected digest.Di
 	if err := pw.pipe.Close(); err != nil {
 		return err
 	}
-	// TODO: Update status to determine committing
-
 	// TODO: timeout waiting for response
 	resp := <-pw.responseC
 	if resp.err != nil {
@@ -354,7 +352,7 @@ func (pw *pushWriter) Commit(ctx context.Context, size int64, expected digest.Di
 	switch resp.StatusCode {
 	case http.StatusOK, http.StatusCreated, http.StatusNoContent, http.StatusAccepted:
 	default:
-		return errors.Errorf("unexpected status: %s", resp.Status)
+		return remoteserrors.NewUnexpectedStatusErr(resp.Response)
 	}
 
 	status, err := pw.tracker.GetStatus(pw.ref)
@@ -378,6 +376,10 @@ func (pw *pushWriter) Commit(ctx context.Context, size int64, expected digest.Di
 	if actual != expected {
 		return errors.Errorf("got digest %s, expected %s", actual, expected)
 	}
+
+	status.Committed = true
+	status.UpdatedAt = time.Now()
+	pw.tracker.SetStatus(pw.ref, status)
 
 	return nil
 }

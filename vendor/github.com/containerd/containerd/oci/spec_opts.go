@@ -273,6 +273,28 @@ func WithMounts(mounts []specs.Mount) SpecOpts {
 	}
 }
 
+// WithoutMounts removes mounts
+func WithoutMounts(dests ...string) SpecOpts {
+	return func(_ context.Context, _ Client, _ *containers.Container, s *Spec) error {
+		var (
+			mounts  []specs.Mount
+			current = s.Mounts
+		)
+	mLoop:
+		for _, m := range current {
+			mDestination := filepath.Clean(m.Destination)
+			for _, dest := range dests {
+				if mDestination == dest {
+					continue mLoop
+				}
+			}
+			mounts = append(mounts, m)
+		}
+		s.Mounts = mounts
+		return nil
+	}
+}
+
 // WithHostNamespace allows a task to run inside the host's linux namespace
 func WithHostNamespace(ns specs.LinuxNamespaceType) SpecOpts {
 	return func(_ context.Context, _ Client, _ *containers.Container, s *Spec) error {
@@ -1172,15 +1194,13 @@ func WithLinuxDevices(devices []specs.LinuxDevice) SpecOpts {
 	}
 }
 
-var ErrNotADevice = errors.New("not a device node")
-
 // WithLinuxDevice adds the device specified by path to the spec
 func WithLinuxDevice(path, permissions string) SpecOpts {
 	return func(_ context.Context, _ Client, _ *containers.Container, s *Spec) error {
 		setLinux(s)
 		setResources(s)
 
-		dev, err := deviceFromPath(path, permissions)
+		dev, err := deviceFromPath(path)
 		if err != nil {
 			return err
 		}

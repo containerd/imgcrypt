@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/http/httptrace"
 	"os"
 	"sync"
 	"text/tabwriter"
@@ -108,8 +109,10 @@ type FetchConfig struct {
 	Platforms []string
 	// Whether or not download all metadata
 	AllMetadata bool
-	// RemoteOpts is not used by ctr, but can be used by other CLI tools
+	// RemoteOpts to configure object resolutions and transfers with remote content providers
 	RemoteOpts []containerd.RemoteOpt
+	// TraceHTTP writes DNS and connection information to the log when dealing with a container registry
+	TraceHTTP bool
 }
 
 // NewFetchConfig returns the default FetchConfig from cli flags
@@ -119,8 +122,9 @@ func NewFetchConfig(ctx context.Context, clicontext *cli.Context) (*FetchConfig,
 		return nil, err
 	}
 	config := &FetchConfig{
-		Resolver: resolver,
-		Labels:   clicontext.StringSlice("label"),
+		Resolver:  resolver,
+		Labels:    clicontext.StringSlice("label"),
+		TraceHTTP: clicontext.Bool("http-trace"),
 	}
 	if !clicontext.GlobalBool("debug") {
 		config.ProgressOutput = os.Stdout
@@ -141,12 +145,26 @@ func NewFetchConfig(ctx context.Context, clicontext *cli.Context) (*FetchConfig,
 		config.AllMetadata = true
 	}
 
+	if clicontext.IsSet("max-concurrent-downloads") {
+		mcd := clicontext.Int("max-concurrent-downloads")
+		config.RemoteOpts = append(config.RemoteOpts, containerd.WithMaxConcurrentDownloads(mcd))
+	}
+
+	if clicontext.IsSet("max-concurrent-uploaded-layers") {
+		mcu := clicontext.Int("max-concurrent-uploaded-layers")
+		config.RemoteOpts = append(config.RemoteOpts, containerd.WithMaxConcurrentUploadedLayers(mcu))
+	}
+
 	return config, nil
 }
 
 // Fetch loads all resources into the content store and returns the image
 func Fetch(ctx context.Context, client *containerd.Client, ref string, config *FetchConfig) (images.Image, error) {
 	ongoing := NewJobs(ref)
+
+	if config.TraceHTTP {
+		ctx = httptrace.WithClientTrace(ctx, commands.NewDebugClientTrace(ctx))
+	}
 
 	pctx, stopProgress := context.WithCancel(ctx)
 	progress := make(chan struct{})
@@ -198,6 +216,8 @@ func Fetch(ctx context.Context, client *containerd.Client, ref string, config *F
 	return img, nil
 }
 
+// ShowProgress continuously updates the output with job progress
+// by checking status in the content store.
 func ShowProgress(ctx context.Context, ongoing *Jobs, cs content.Store, out io.Writer) {
 	var (
 		ticker   = time.NewTicker(100 * time.Millisecond)
@@ -328,6 +348,7 @@ type Jobs struct {
 	resolved bool
 }
 
+// NewJobs creates a new instance of the job status tracker
 func NewJobs(name string) *Jobs {
 	return &Jobs{
 		name:  name,
@@ -335,6 +356,7 @@ func NewJobs(name string) *Jobs {
 	}
 }
 
+// Add adds a descriptor to be tracked
 func (j *Jobs) Add(desc ocispec.Descriptor) {
 	j.mu.Lock()
 	defer j.mu.Unlock()
@@ -347,6 +369,7 @@ func (j *Jobs) Add(desc ocispec.Descriptor) {
 	j.added[desc.Digest] = struct{}{}
 }
 
+// Jobs returns a list of all tracked descriptors
 func (j *Jobs) Jobs() []ocispec.Descriptor {
 	j.mu.Lock()
 	defer j.mu.Unlock()
@@ -355,6 +378,7 @@ func (j *Jobs) Jobs() []ocispec.Descriptor {
 	return append(descs, j.descs...)
 }
 
+// IsResolved checks whether a descriptor has been resolved
 func (j *Jobs) IsResolved() bool {
 	j.mu.Lock()
 	defer j.mu.Unlock()
