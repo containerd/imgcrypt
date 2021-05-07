@@ -1,5 +1,8 @@
 CHANGES
 
+next:
+  - Sync'ed ctr-enc with ctr of containerd-1.5.0
+
 v1.1.1:
   - rebased on ocicrypt 1.1.1
 

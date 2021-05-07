@@ -7,6 +7,7 @@ require (
 	github.com/Microsoft/hcsshim v0.8.16
 	github.com/containerd/console v1.0.2
 	github.com/containerd/containerd v1.5.0-rc.0
+	github.com/containerd/go-cni v1.0.1
 	github.com/containerd/typeurl v1.0.1
 	github.com/containers/ocicrypt v1.1.1
 	github.com/gogo/protobuf v1.3.2
