@@ -66,6 +66,7 @@ github.com/containerd/containerd/cmd/ctr/commands/events
 github.com/containerd/containerd/cmd/ctr/commands/install
 github.com/containerd/containerd/cmd/ctr/commands/leases
 github.com/containerd/containerd/cmd/ctr/commands/namespaces
+github.com/containerd/containerd/cmd/ctr/commands/oci
 github.com/containerd/containerd/cmd/ctr/commands/plugins
 github.com/containerd/containerd/cmd/ctr/commands/pprof
 github.com/containerd/containerd/cmd/ctr/commands/shim
@@ -75,7 +76,9 @@ github.com/containerd/containerd/cmd/ctr/commands/version
 github.com/containerd/containerd/containers
 github.com/containerd/containerd/content
 github.com/containerd/containerd/content/proxy
+github.com/containerd/containerd/contrib/apparmor
 github.com/containerd/containerd/contrib/nvidia
+github.com/containerd/containerd/contrib/seccomp
 github.com/containerd/containerd/defaults
 github.com/containerd/containerd/diff
 github.com/containerd/containerd/errdefs
@@ -95,6 +98,7 @@ github.com/containerd/containerd/oci
 github.com/containerd/containerd/pkg/cap
 github.com/containerd/containerd/pkg/dialer
 github.com/containerd/containerd/pkg/progress
+github.com/containerd/containerd/pkg/runtimeoptions/v1
 github.com/containerd/containerd/pkg/seed
 github.com/containerd/containerd/pkg/ttrpcutil
 github.com/containerd/containerd/pkg/userns
@@ -126,12 +130,22 @@ github.com/containerd/continuity/fs
 github.com/containerd/continuity/sysx
 # github.com/containerd/fifo v0.0.0-20210316144830-115abcc95a1d
 github.com/containerd/fifo
+# github.com/containerd/go-cni v1.0.1
+github.com/containerd/go-cni
 # github.com/containerd/go-runc v0.0.0-20201020171139-16b287bc67d0
 github.com/containerd/go-runc
 # github.com/containerd/ttrpc v1.0.2
 github.com/containerd/ttrpc
 # github.com/containerd/typeurl v1.0.1
 github.com/containerd/typeurl
+# github.com/containernetworking/cni v0.8.0
+github.com/containernetworking/cni/libcni
+github.com/containernetworking/cni/pkg/invoke
+github.com/containernetworking/cni/pkg/types
+github.com/containernetworking/cni/pkg/types/020
+github.com/containernetworking/cni/pkg/types/current
+github.com/containernetworking/cni/pkg/utils
+github.com/containernetworking/cni/pkg/version
 # github.com/containers/ocicrypt v1.1.1
 github.com/containers/ocicrypt
 github.com/containers/ocicrypt/blockcipher

@@ -18,6 +18,7 @@ package images
 
 import (
 	gocontext "context"
+	"net/http/httptrace"
 	"os"
 	"sync"
 	"text/tabwriter"
@@ -29,6 +30,7 @@ import (
 	"github.com/containerd/containerd/images"
 	"github.com/containerd/containerd/log"
 	"github.com/containerd/containerd/pkg/progress"
+	"github.com/containerd/containerd/platforms"
 	"github.com/containerd/containerd/remotes"
 	"github.com/containerd/containerd/remotes/docker"
 	digest "github.com/opencontainers/go-digest"
@@ -58,6 +60,13 @@ var pushCommand = cli.Command{
 		Name:  "manifest-type",
 		Usage: "media type of manifest digest",
 		Value: ocispec.MediaTypeImageManifest,
+	}, cli.StringSliceFlag{
+		Name:  "platform",
+		Usage: "push content from a specific platform",
+		Value: &cli.StringSlice{},
+	}, cli.IntFlag{
+		Name:  "max-concurrent-uploaded-layers",
+		Usage: "Set the max concurrent uploaded layers for each push",
 	}),
 	Action: func(context *cli.Context) error {
 		var (
@@ -91,8 +100,32 @@ var pushCommand = cli.Command{
 				return errors.Wrap(err, "unable to resolve image to manifest")
 			}
 			desc = img.Target
+
+			if pss := context.StringSlice("platform"); len(pss) == 1 {
+				p, err := platforms.Parse(pss[0])
+				if err != nil {
+					return errors.Wrapf(err, "invalid platform %q", pss[0])
+				}
+
+				cs := client.ContentStore()
+				if manifests, err := images.Children(ctx, cs, desc); err == nil && len(manifests) > 0 {
+					matcher := platforms.NewMatcher(p)
+					for _, manifest := range manifests {
+						if manifest.Platform != nil && matcher.Match(*manifest.Platform) {
+							if _, err := images.Children(ctx, cs, manifest); err != nil {
+								return errors.Wrap(err, "no matching manifest")
+							}
+							desc = manifest
+							break
+						}
+					}
+				}
+			}
 		}
 
+		if context.Bool("http-trace") {
+			ctx = httptrace.WithClientTrace(ctx, commands.NewDebugClientTrace(ctx))
+		}
 		resolver, err := commands.GetResolver(ctx, context)
 		if err != nil {
 			return err
@@ -114,10 +147,17 @@ var pushCommand = cli.Command{
 				return nil, nil
 			})
 
-			return client.Push(ctx, ref, desc,
+			ropts := []containerd.RemoteOpt{
 				containerd.WithResolver(resolver),
 				containerd.WithImageHandler(jobHandler),
-			)
+			}
+
+			if context.IsSet("max-concurrent-uploaded-layers") {
+				mcu := context.Int("max-concurrent-uploaded-layers")
+				ropts = append(ropts, containerd.WithMaxConcurrentUploadedLayers(mcu))
+			}
+
+			return client.Push(ctx, ref, desc, ropts...)
 		})
 
 		// don't show progress if debug mode is set

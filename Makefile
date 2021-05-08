@@ -16,6 +16,9 @@
 # Base path used to install.
 DESTDIR ?= /usr/local
 
+VERSION=$(shell git describe --match 'v[0-9]*' --dirty='.m' --always)
+
+CTR_LDFLAGS=-ldflags '-X github.com/containerd/containerd/version.Version=$(VERSION)'
 COMMANDS=ctd-decoder ctr-enc
 
 BINARIES=$(addprefix bin/,$(COMMANDS))
@@ -32,7 +35,7 @@ bin/ctd-decoder: cmd/ctd-decoder FORCE
 	go build -o $@ -v ./cmd/ctd-decoder/
 
 bin/ctr-enc: cmd/ctr FORCE
-	go build -o $@ -v ./cmd/ctr/
+	go build -o $@ ${CTR_LDFLAGS} -v ./cmd/ctr/
 
 check:
 	@echo "$@"
