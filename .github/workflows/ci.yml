@@ -88,6 +88,7 @@ jobs:
       - name: Dependencies
         shell: bash
         run: |
+          sudo apt update
           sudo apt install gnutls-bin softhsm2 libseccomp-dev
           make binaries
           sudo make install
