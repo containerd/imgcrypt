@@ -1,4 +1,4 @@
-# github.com/Microsoft/go-winio v0.4.17-0.20210324224401-5516f17a5958
+# github.com/Microsoft/go-winio v0.4.17
 github.com/Microsoft/go-winio
 github.com/Microsoft/go-winio/backuptar
 github.com/Microsoft/go-winio/pkg/guid
@@ -27,20 +27,22 @@ github.com/Microsoft/hcsshim/internal/vmcompute
 github.com/Microsoft/hcsshim/internal/wclayer
 github.com/Microsoft/hcsshim/internal/winapi
 github.com/Microsoft/hcsshim/osversion
-# github.com/cilium/ebpf v0.2.0
+github.com/Microsoft/hcsshim/pkg/ociwclayer
+# github.com/cilium/ebpf v0.5.0
 github.com/cilium/ebpf
 github.com/cilium/ebpf/asm
 github.com/cilium/ebpf/internal
 github.com/cilium/ebpf/internal/btf
 github.com/cilium/ebpf/internal/unix
-# github.com/containerd/cgroups v0.0.0-20210114181951-8a68de567b68
+github.com/cilium/ebpf/link
+# github.com/containerd/cgroups v1.0.1
 github.com/containerd/cgroups
 github.com/containerd/cgroups/stats/v1
 github.com/containerd/cgroups/v2
 github.com/containerd/cgroups/v2/stats
 # github.com/containerd/console v1.0.2
 github.com/containerd/console
-# github.com/containerd/containerd v1.5.0-rc.0
+# github.com/containerd/containerd v1.5.0
 github.com/containerd/containerd
 github.com/containerd/containerd/api/events
 github.com/containerd/containerd/api/services/containers/v1
@@ -125,20 +127,20 @@ github.com/containerd/containerd/snapshots/proxy
 github.com/containerd/containerd/sys
 github.com/containerd/containerd/sys/reaper
 github.com/containerd/containerd/version
-# github.com/containerd/continuity v0.0.0-20210208174643-50096c924a4e
+# github.com/containerd/continuity v0.1.0
 github.com/containerd/continuity/fs
 github.com/containerd/continuity/sysx
-# github.com/containerd/fifo v0.0.0-20210316144830-115abcc95a1d
+# github.com/containerd/fifo v1.0.0
 github.com/containerd/fifo
-# github.com/containerd/go-cni v1.0.1
+# github.com/containerd/go-cni v1.0.2
 github.com/containerd/go-cni
-# github.com/containerd/go-runc v0.0.0-20201020171139-16b287bc67d0
+# github.com/containerd/go-runc v1.0.0
 github.com/containerd/go-runc
 # github.com/containerd/ttrpc v1.0.2
 github.com/containerd/ttrpc
-# github.com/containerd/typeurl v1.0.1
+# github.com/containerd/typeurl v1.0.2
 github.com/containerd/typeurl
-# github.com/containernetworking/cni v0.8.0
+# github.com/containernetworking/cni v0.8.1
 github.com/containernetworking/cni/libcni
 github.com/containernetworking/cni/pkg/invoke
 github.com/containernetworking/cni/pkg/types
@@ -162,7 +164,7 @@ github.com/containers/ocicrypt/keywrap/pkcs7
 github.com/containers/ocicrypt/spec
 github.com/containers/ocicrypt/utils
 github.com/containers/ocicrypt/utils/keyprovider
-# github.com/coreos/go-systemd/v22 v22.1.0
+# github.com/coreos/go-systemd/v22 v22.3.1
 github.com/coreos/go-systemd/v22/dbus
 # github.com/cpuguy83/go-md2man/v2 v2.0.0
 github.com/cpuguy83/go-md2man/v2/md2man
@@ -170,7 +172,7 @@ github.com/cpuguy83/go-md2man/v2/md2man
 github.com/docker/go-events
 # github.com/docker/go-units v0.4.0
 github.com/docker/go-units
-# github.com/godbus/dbus/v5 v5.0.3
+# github.com/godbus/dbus/v5 v5.0.4
 github.com/godbus/dbus/v5
 # github.com/gogo/googleapis v1.4.0
 github.com/gogo/googleapis/google/rpc
@@ -188,7 +190,7 @@ github.com/golang/protobuf/ptypes
 github.com/golang/protobuf/ptypes/any
 github.com/golang/protobuf/ptypes/duration
 github.com/golang/protobuf/ptypes/timestamp
-# github.com/google/uuid v1.1.2
+# github.com/google/uuid v1.2.0
 github.com/google/uuid
 # github.com/klauspost/compress v1.11.13
 github.com/klauspost/compress/fse
@@ -198,6 +200,8 @@ github.com/klauspost/compress/zstd
 github.com/klauspost/compress/zstd/internal/xxhash
 # github.com/miekg/pkcs11 v1.0.3
 github.com/miekg/pkcs11
+# github.com/moby/locker v1.0.1
+github.com/moby/locker
 # github.com/moby/sys/mountinfo v0.4.1
 github.com/moby/sys/mountinfo
 # github.com/opencontainers/go-digest v1.0.0
@@ -206,9 +210,9 @@ github.com/opencontainers/go-digest
 github.com/opencontainers/image-spec/identity
 github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
-# github.com/opencontainers/runc v1.0.0-rc93
+# github.com/opencontainers/runc v1.0.0-rc94
 github.com/opencontainers/runc/libcontainer/user
-# github.com/opencontainers/runtime-spec v1.0.3-0.20200929063507-e6143ca7d51d
+# github.com/opencontainers/runtime-spec v1.0.3-0.20210326190908-1c3f411f0417
 github.com/opencontainers/runtime-spec/specs-go
 # github.com/opencontainers/selinux v1.8.0
 github.com/opencontainers/selinux/go-selinux
@@ -260,7 +264,7 @@ golang.org/x/net/trace
 # golang.org/x/sync v0.0.0-20201207232520-09787c993a3a
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.0.0-20210324051608-47abb6519492
+# golang.org/x/sys v0.0.0-20210426230700-d19ff857e887
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/plan9
 golang.org/x/sys/unix
