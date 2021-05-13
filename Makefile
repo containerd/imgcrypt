@@ -20,8 +20,10 @@ VERSION=$(shell git describe --match 'v[0-9]*' --dirty='.m' --always)
 
 CTR_LDFLAGS=-ldflags '-X github.com/containerd/containerd/version.Version=$(VERSION)'
 COMMANDS=ctd-decoder ctr-enc
+RELEASE_COMMANDS=ctd-decoder
 
 BINARIES=$(addprefix bin/,$(COMMANDS))
+RELEASE_BINARIES=$(addprefix bin/,$(RELEASE_COMMANDS))
 
 .PHONY: check build ctd-decoder
 
@@ -46,6 +48,11 @@ install:
 	@echo "$@"
 	@mkdir -p $(DESTDIR)/bin
 	@install $(BINARIES) $(DESTDIR)/bin
+
+containerd-release:
+	@echo "$@"
+	@mkdir -p $(DESTDIR)/bin
+	@install $(RELEASE_BINARIES) $(DESTDIR)/bin
 
 uninstall:
 	@echo "$@"
