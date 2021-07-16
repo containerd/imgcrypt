@@ -318,7 +318,7 @@ func cryptChildren(ctx context.Context, cs content.Store, desc ocispec.Descripto
 			Layers: newLayers,
 		}
 
-		mb, err := json.MarshalIndent(newManifest, "", "   ")
+		mb, err := json.Marshal(newManifest)
 		if err != nil {
 			return ocispec.Descriptor{}, false, errors.Wrap(err, "failed to marshal image")
 		}
@@ -398,7 +398,7 @@ func cryptManifestList(ctx context.Context, cs content.Store, desc ocispec.Descr
 			Manifests: newManifests,
 		}
 
-		mb, err := json.MarshalIndent(newIndex, "", "   ")
+		mb, err := json.Marshal(newIndex)
 		if err != nil {
 			return ocispec.Descriptor{}, false, errors.Wrap(err, "failed to marshal index")
 		}
