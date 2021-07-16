@@ -28,6 +28,7 @@ import (
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/images"
 	"github.com/containerd/imgcrypt/images/encryption"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -69,6 +70,9 @@ func NewContainer(ctx gocontext.Context, client *containerd.Client, context *cli
 			opts = append(opts, oci.WithDefaultSpec())
 			opts = append(opts, oci.WithWindowNetworksAllowUnqualifiedDNSQuery())
 			opts = append(opts, oci.WithWindowsIgnoreFlushesDuringBoot())
+		}
+		if ef := context.String("env-file"); ef != "" {
+			opts = append(opts, oci.WithEnvFile(ef))
 		}
 		opts = append(opts, oci.WithEnv(context.StringSlice("env")))
 		opts = append(opts, withMounts(context))
@@ -115,6 +119,9 @@ func NewContainer(ctx gocontext.Context, client *containerd.Client, context *cli
 				logrus.WithError(err).Error("console size")
 			}
 			opts = append(opts, oci.WithTTYSize(int(size.Width), int(size.Height)))
+		}
+		if context.Bool("net-host") {
+			return nil, errors.New("Cannot use host mode networking with Windows containers")
 		}
 		if context.Bool("isolated") {
 			opts = append(opts, oci.WithWindowsHyperV)

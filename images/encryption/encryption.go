@@ -25,6 +25,7 @@ import (
 	"math/rand"
 
 	"github.com/containerd/containerd/images"
+	"github.com/containerd/containerd/images/converter"
 	"github.com/containers/ocicrypt"
 	encconfig "github.com/containers/ocicrypt/config"
 
@@ -448,6 +449,28 @@ func EncryptImage(ctx context.Context, cs content.Store, desc ocispec.Descriptor
 // DecryptImage decrypts an image; it accepts either an OCI descriptor representing a manifest list or a single manifest
 func DecryptImage(ctx context.Context, cs content.Store, desc ocispec.Descriptor, cc *encconfig.CryptoConfig, lf LayerFilter) (ocispec.Descriptor, bool, error) {
 	return cryptImage(ctx, cs, desc, cc, lf, cryptoOpDecrypt)
+}
+
+// GetImageEncryptConverter returns a converter function for image encryption
+func GetImageEncryptConverter(cc *encconfig.CryptoConfig, lf LayerFilter) converter.ConvertFunc {
+	return func(ctx context.Context, cs content.Store, desc ocispec.Descriptor) (*ocispec.Descriptor, error) {
+		newDesc, _, err := EncryptImage(ctx, cs, desc, cc, lf)
+		if err != nil {
+			return nil, err
+		}
+		return &newDesc, nil
+	}
+}
+
+// GetImageEncryptConverter returns a converter function for image decryption
+func GetImageDecryptConverter(cc *encconfig.CryptoConfig, lf LayerFilter) converter.ConvertFunc {
+	return func(ctx context.Context, cs content.Store, desc ocispec.Descriptor) (*ocispec.Descriptor, error) {
+		newDesc, _, err := DecryptImage(ctx, cs, desc, cc, lf)
+		if err != nil {
+			return nil, err
+		}
+		return &newDesc, nil
+	}
 }
 
 // CheckAuthorization checks whether a user has the right keys to be allowed to access an image (every layer)

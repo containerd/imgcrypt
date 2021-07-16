@@ -1,0 +1,141 @@
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+
+  checks:
+    name: Project Checks
+    runs-on: ubuntu-18.04
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/setup-go@v2
+        with:
+          go-version: 1.16
+
+      - name: Set env
+        shell: bash
+        run: |
+          echo "GOPATH=${{ github.workspace }}" >> $GITHUB_ENV
+          echo "${{ github.workspace }}/bin" >> $GITHUB_PATH
+
+      - uses: actions/checkout@v2
+        with:
+          path: src/github.com/containerd/imgcrypt
+          fetch-depth: 25
+
+      - uses: containerd/project-checks@v1
+        with:
+          working-directory: src/github.com/containerd/imgcrypt
+
+  linters:
+    name: Linters
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+
+    strategy:
+      matrix:
+        go-version: [1.16]
+        os: [ubuntu-18.04]
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          path: src/github.com/containerd/imgcrypt
+
+      - name: Set env
+        shell: bash
+        run: |
+          echo "GOPATH=${{ github.workspace }}" >> $GITHUB_ENV
+          echo "${{ github.workspace }}/bin" >> $GITHUB_PATH
+
+      - uses: golangci/golangci-lint-action@v2
+        with:
+          version: v1.29
+          working-directory: src/github.com/containerd/imgcrypt
+
+  tests:
+    name: Linux Tests
+    runs-on: ubuntu-18.04
+    timeout-minutes: 15
+    needs: [linters, checks]
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          repository: containerd/containerd
+          path: src/github.com/containerd/containerd
+
+      - uses: actions/checkout@v2
+        with:
+          path: src/github.com/containerd/imgcrypt
+
+      - uses: actions/setup-go@v2
+        with:
+          go-version: 1.16
+
+      - name: Set env
+        shell: bash
+        run: |
+          echo "GOPATH=${{ github.workspace }}" >> $GITHUB_ENV
+          echo "${{ github.workspace }}/bin" >> $GITHUB_PATH
+
+      - name: Dependencies
+        shell: bash
+        run: |
+          sudo apt update
+          sudo apt install gnutls-bin softhsm2 libseccomp-dev
+          make binaries
+          sudo make install
+          sudo rm /usr/local/bin/ctr
+          mkdir ../../lumjjb && pushd ../../lumjjb
+          git clone https://github.com/lumjjb/simple-ocicrypt-keyprovider && cd simple-ocicrypt-keyprovider
+          make
+          sudo cp simple_crypt /usr/local/bin
+          popd
+          RUNC_COMMIT=$(grep opencontainers/runc go.mod | awk '{print $2}')
+          pushd ../..
+          rm -fR opencontainers/runc && mkdir -p opencontainers && cd opencontainers
+          git clone https://github.com/opencontainers/runc.git && cd runc
+          git checkout "${RUNC_COMMIT}"
+          make BUILDTAGS='apparmor seccomp selinux' runc
+          sudo make install
+          popd
+        working-directory: src/github.com/containerd/containerd
+
+      - run: |
+          make test
+          make
+          CONTAINERD=$(type -P containerd) KEYPROVIDER=/usr/local/bin/simple_crypt ./script/tests/test_encryption.sh
+        working-directory: src/github.com/containerd/imgcrypt
+
+  windows-tests:
+    name: Windows Tests
+    runs-on: windows-2019
+    timeout-minutes: 15
+    needs: [linters, checks]
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          path: src/github.com/containerd/imgcrypt
+
+      - uses: actions/setup-go@v2
+        with:
+          go-version: 1.16
+
+      - name: Set env
+        shell: bash
+        run: |
+          echo "GOPATH=${{ github.workspace }}" >> $GITHUB_ENV
+          echo "${{ github.workspace }}/bin" >> $GITHUB_PATH
+
+      - run: |
+          make test
+          make
+        working-directory: src/github.com/containerd/imgcrypt
