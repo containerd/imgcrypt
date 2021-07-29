@@ -11,7 +11,7 @@ of containerd's `ctr` tool (`ctr-enc') with support for encrypting and decryptin
 # Usage
 
 `imgcrypt` requires containerd 1.3 or later. Containerd 1.4 or later is required when used with Kubernetes.
-For configuration instructions for kubernetes, please consult the [CRI decryption document](https://github.com/containerd/containerd/blob/master/docs/decryption.md).
+For configuration instructions for kubernetes, please consult the [CRI decryption document](https://github.com/containerd/containerd/blob/main/docs/cri/decryption.md).
 
 Build and install `imgcrypt`:
 
