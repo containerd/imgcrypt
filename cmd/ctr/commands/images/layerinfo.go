@@ -17,6 +17,7 @@
 package images
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"sort"
@@ -27,7 +28,6 @@ import (
 	"github.com/containerd/containerd/platforms"
 	"github.com/containers/ocicrypt"
 
-	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 )
 

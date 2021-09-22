@@ -32,7 +32,7 @@ import (
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/flags"
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/run"
 	"github.com/containerd/typeurl"
-	"github.com/pkg/errors"
+
 	"github.com/urfave/cli"
 )
 
@@ -67,17 +67,17 @@ var createCommand = cli.Command{
 		if config {
 			id = context.Args().First()
 			if context.NArg() > 1 {
-				return errors.Wrap(errdefs.ErrInvalidArgument, "with spec config file, only container id should be provided")
+				return fmt.Errorf("with spec config file, only container id should be provided: %w", errdefs.ErrInvalidArgument)
 			}
 		} else {
 			id = context.Args().Get(1)
 			ref = context.Args().First()
 			if ref == "" {
-				return errors.Wrap(errdefs.ErrInvalidArgument, "image ref must be provided")
+				return fmt.Errorf("image ref must be provided: %w", errdefs.ErrInvalidArgument)
 			}
 		}
 		if id == "" {
-			return errors.Wrap(errdefs.ErrInvalidArgument, "container id must be provided")
+			return fmt.Errorf("container id must be provided: %w", errdefs.ErrInvalidArgument)
 		}
 		client, ctx, cancel, err := commands.NewClient(context)
 		if err != nil {
@@ -170,7 +170,7 @@ var deleteCommand = cli.Command{
 		}
 
 		if context.NArg() == 0 {
-			return errors.Wrap(errdefs.ErrInvalidArgument, "must specify at least one container to delete")
+			return fmt.Errorf("must specify at least one container to delete: %w", errdefs.ErrInvalidArgument)
 		}
 		for _, arg := range context.Args() {
 			if err := deleteContainer(ctx, client, arg, deleteOpts...); err != nil {
@@ -216,7 +216,7 @@ var setLabelsCommand = cli.Command{
 	Action: func(context *cli.Context) error {
 		containerID, labels := commands.ObjectWithLabelArgs(context)
 		if containerID == "" {
-			return errors.Wrap(errdefs.ErrInvalidArgument, "container id must be provided")
+			return fmt.Errorf("container id must be provided: %w", errdefs.ErrInvalidArgument)
 		}
 		client, ctx, cancel, err := commands.NewClient(context)
 		if err != nil {
@@ -258,7 +258,7 @@ var infoCommand = cli.Command{
 	Action: func(context *cli.Context) error {
 		id := context.Args().First()
 		if id == "" {
-			return errors.Wrap(errdefs.ErrInvalidArgument, "container id must be provided")
+			return fmt.Errorf("container id must be provided: %w", errdefs.ErrInvalidArgument)
 		}
 		client, ctx, cancel, err := commands.NewClient(context)
 		if err != nil {

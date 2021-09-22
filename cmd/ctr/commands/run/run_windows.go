@@ -18,8 +18,8 @@ package run
 
 import (
 	gocontext "context"
+	"errors"
 
-	"github.com/Microsoft/hcsshim/cmd/containerd-shim-runhcs-v1/options"
 	"github.com/containerd/console"
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/oci"
@@ -27,8 +27,9 @@ import (
 	"github.com/containerd/imgcrypt/cmd/ctr/commands"
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/images"
 	"github.com/containerd/imgcrypt/images/encryption"
+
+	"github.com/Microsoft/hcsshim/cmd/containerd-shim-runhcs-v1/options"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )

@@ -24,9 +24,9 @@ import (
 	"github.com/containerd/imgcrypt"
 	"github.com/containerd/imgcrypt/images/encryption"
 	"github.com/containerd/typeurl"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/gogo/protobuf/types"
-	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 )
 
@@ -72,14 +72,14 @@ func decrypt(ctx *cli.Context) error {
 	if ctx.GlobalIsSet("decryption-keys-path") {
 		keyPathCc, err := getDecryptionKeys(ctx.GlobalString("decryption-keys-path"))
 		if err != nil {
-			return errors.Wrap(err, "Unable to get decryption keys in provided key path")
+			return fmt.Errorf("unable to get decryption keys in provided key path: %w", err)
 		}
 		decCc = combineDecryptionConfigs(keyPathCc.DecryptConfig, &payload.DecryptConfig)
 	}
 
 	_, r, _, err := encryption.DecryptLayer(decCc, os.Stdin, payload.Descriptor, false)
 	if err != nil {
-		return errors.Wrapf(err, "call to DecryptLayer failed")
+		return fmt.Errorf("call to DecryptLayer failed: %w", err)
 	}
 
 	for {
@@ -88,7 +88,7 @@ func decrypt(ctx *cli.Context) error {
 			if err == io.EOF {
 				break
 			}
-			return errors.Wrapf(err, "could not copy data")
+			return fmt.Errorf("could not copy data: %w", err)
 		}
 	}
 	return nil
@@ -97,19 +97,19 @@ func decrypt(ctx *cli.Context) error {
 func getPayload() (*imgcrypt.Payload, error) {
 	data, err := readPayload()
 	if err != nil {
-		return nil, errors.Wrap(err, "read payload")
+		return nil, fmt.Errorf("read payload: %w", err)
 	}
 	var any types.Any
 	if err := proto.Unmarshal(data, &any); err != nil {
-		return nil, errors.Wrapf(err, "could not proto.Unmarshal() decrypt data")
+		return nil, fmt.Errorf("could not proto.Unmarshal() decrypt data: %w", err)
 	}
 	v, err := typeurl.UnmarshalAny(&any)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not UnmarshalAny() the decrypt data")
+		return nil, fmt.Errorf("could not UnmarshalAny() the decrypt data: %w", err)
 	}
 	l, ok := v.(*imgcrypt.Payload)
 	if !ok {
-		return nil, errors.Errorf("unknown payload type %s", any.TypeUrl)
+		return nil, fmt.Errorf("unknown payload type %s", any.TypeUrl)
 	}
 	return l, nil
 }

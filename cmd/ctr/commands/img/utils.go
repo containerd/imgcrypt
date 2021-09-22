@@ -18,14 +18,15 @@ package img
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/containerd/containerd/content"
 	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/images"
 	"github.com/containerd/containerd/platforms"
+
 	encocispec "github.com/containers/ocicrypt/spec"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/pkg/errors"
 )
 
 // GetImageLayerDescriptors gets the image layer Descriptors of an image; the array contains
@@ -73,7 +74,7 @@ func GetImageLayerDescriptors(ctx context.Context, cs content.Store, desc ocispe
 		}
 	case images.MediaTypeDockerSchema2Config, ocispec.MediaTypeImageConfig:
 	default:
-		return nil, errors.Wrapf(errdefs.ErrInvalidArgument, "GetImageLayerDescriptors: unhandled media type %s", desc.MediaType)
+		return nil, fmt.Errorf("unhandled media type %s: %w", desc.MediaType, errdefs.ErrInvalidArgument)
 	}
 	return lis, nil
 }

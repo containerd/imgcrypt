@@ -18,6 +18,7 @@ package main
 
 import (
 	b64 "encoding/base64"
+	"errors"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -25,7 +26,6 @@ import (
 
 	encconfig "github.com/containers/ocicrypt/config"
 	cryptUtils "github.com/containers/ocicrypt/utils"
-	"github.com/pkg/errors"
 )
 
 // getDecryptionKeys reads the keys from the given directory
