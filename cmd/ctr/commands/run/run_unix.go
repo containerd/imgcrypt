@@ -20,6 +20,7 @@ package run
 
 import (
 	gocontext "context"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strconv"
@@ -37,8 +38,8 @@ import (
 	"github.com/containerd/imgcrypt/cmd/ctr/commands"
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/images"
 	"github.com/containerd/imgcrypt/images/encryption"
+
 	"github.com/opencontainers/runtime-spec/specs-go"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -376,15 +377,15 @@ func parseIDMapping(mapping string) (specs.LinuxIDMapping, error) {
 	}
 	cID, err := strconv.ParseUint(parts[0], 0, 32)
 	if err != nil {
-		return specs.LinuxIDMapping{}, errors.Wrapf(err, "invalid container id for user namespace remapping")
+		return specs.LinuxIDMapping{}, fmt.Errorf("invalid container id for user namespace remapping: %w", err)
 	}
 	hID, err := strconv.ParseUint(parts[1], 0, 32)
 	if err != nil {
-		return specs.LinuxIDMapping{}, errors.Wrapf(err, "invalid host id for user namespace remapping")
+		return specs.LinuxIDMapping{}, fmt.Errorf("invalid host id for user namespace remapping: %w", err)
 	}
 	size, err := strconv.ParseUint(parts[2], 0, 32)
 	if err != nil {
-		return specs.LinuxIDMapping{}, errors.Wrapf(err, "invalid size for user namespace remapping")
+		return specs.LinuxIDMapping{}, fmt.Errorf("invalid size for user namespace remapping: %w", err)
 	}
 	return specs.LinuxIDMapping{
 		ContainerID: uint32(cID),

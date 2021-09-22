@@ -17,12 +17,13 @@
 package images
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/containerd/containerd/cmd/ctr/commands"
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/flags"
 	imgenc "github.com/containerd/imgcrypt/images/encryption"
-	"github.com/pkg/errors"
+
 	"github.com/urfave/cli"
 )
 

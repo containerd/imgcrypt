@@ -17,6 +17,7 @@
 package images
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -28,9 +29,7 @@ import (
 	"github.com/containers/ocicrypt/config/pkcs11config"
 	"github.com/containers/ocicrypt/crypto/pkcs11"
 	encutils "github.com/containers/ocicrypt/utils"
-
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 )
 
@@ -50,7 +49,7 @@ func processRecipientKeys(recipients []string) ([][]byte, [][]byte, [][]byte, []
 
 		idx := strings.Index(recipient, ":")
 		if idx < 0 {
-			return nil, nil, nil, nil, nil, nil, errors.New("Invalid recipient format")
+			return nil, nil, nil, nil, nil, nil, errors.New("invalid recipient format")
 		}
 
 		protocol := recipient[:idx]
@@ -63,41 +62,41 @@ func processRecipientKeys(recipients []string) ([][]byte, [][]byte, [][]byte, []
 		case "jwe":
 			tmp, err := ioutil.ReadFile(value)
 			if err != nil {
-				return nil, nil, nil, nil, nil, nil, errors.Wrap(err, "Unable to read file")
+				return nil, nil, nil, nil, nil, nil, fmt.Errorf("unable to read file: %w", err)
 			}
 			if !encutils.IsPublicKey(tmp) {
-				return nil, nil, nil, nil, nil, nil, errors.New("File provided is not a public key")
+				return nil, nil, nil, nil, nil, nil, errors.New("file provided is not a public key")
 			}
 			pubkeys = append(pubkeys, tmp)
 
 		case "pkcs7":
 			tmp, err := ioutil.ReadFile(value)
 			if err != nil {
-				return nil, nil, nil, nil, nil, nil, errors.Wrap(err, "Unable to read file")
+				return nil, nil, nil, nil, nil, nil, fmt.Errorf("unable to read file %s: %w", value, err)
 			}
 			if !encutils.IsCertificate(tmp) {
-				return nil, nil, nil, nil, nil, nil, errors.New("File provided is not an x509 cert")
+				return nil, nil, nil, nil, nil, nil, errors.New("file provided is not an x509 cert")
 			}
 			x509s = append(x509s, tmp)
 
 		case "pkcs11":
 			tmp, err := ioutil.ReadFile(value)
 			if err != nil {
-				return nil, nil, nil, nil, nil, nil, errors.Wrap(err, "Unable to read file")
+				return nil, nil, nil, nil, nil, nil, fmt.Errorf("unable to read file %s: %w", value, err)
 			}
 			if encutils.IsPkcs11PublicKey(tmp) {
 				pkcs11Yamls = append(pkcs11Yamls, tmp)
 			} else if encutils.IsPublicKey(tmp) {
 				pkcs11Pubkeys = append(pkcs11Pubkeys, tmp)
 			} else {
-				return nil, nil, nil, nil, nil, nil, errors.New("Provided file is not a public key")
+				return nil, nil, nil, nil, nil, nil, errors.New("provided file is not a public key")
 			}
 
 		case "provider":
 			keyProvider = append(keyProvider, []byte(value))
 
 		default:
-			return nil, nil, nil, nil, nil, nil, errors.New("Provided protocol not recognized")
+			return nil, nil, nil, nil, nil, nil, errors.New("provided protocol not recognized")
 		}
 	}
 	return gpgRecipients, pubkeys, x509s, pkcs11Pubkeys, pkcs11Yamls, keyProvider, nil
@@ -117,7 +116,7 @@ func processPwdString(pwdString string) ([]byte, error) {
 		fdStr := pwdString[3:]
 		fd, err := strconv.Atoi(fdStr)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not parse file descriptor %s", fdStr)
+			return nil, fmt.Errorf("could not parse file descriptor %s: %w", fdStr, err)
 		}
 		f := os.NewFile(uintptr(fd), "pwdfile")
 		if f == nil {
@@ -127,7 +126,7 @@ func processPwdString(pwdString string) ([]byte, error) {
 		pwd := make([]byte, 64)
 		n, err := f.Read(pwd)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not read from file descriptor")
+			return nil, fmt.Errorf("could not read from file descriptor: %w", err)
 		}
 		return pwd[:n], nil
 	}

@@ -19,11 +19,11 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 
 	winio "github.com/Microsoft/go-winio"
-	"github.com/pkg/errors"
 )
 
 func readPayload() ([]byte, error) {
@@ -31,7 +31,7 @@ func readPayload() ([]byte, error) {
 
 	conn, err := winio.DialPipe(path, nil)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not DialPipe")
+		return nil, fmt.Errorf("could not DialPipe: %w", err)
 	}
 	defer conn.Close()
 	return ioutil.ReadAll(conn)
