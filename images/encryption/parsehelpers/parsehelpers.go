@@ -14,7 +14,9 @@
    limitations under the License.
 */
 
-package images
+// Package parsehelpers provides parse helpers for CLI applications.
+// This package does not depend on any specific CLI library such as github.com/urfave/cli .
+package parsehelpers
 
 import (
 	"errors"
@@ -30,8 +32,15 @@ import (
 	"github.com/containers/ocicrypt/crypto/pkcs11"
 	encutils "github.com/containers/ocicrypt/utils"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/urfave/cli"
 )
+
+type EncArgs struct {
+	GPGHomedir   string   // --gpg-homedir
+	GPGVersion   string   // --gpg-version
+	Key          []string // --key
+	Recipient    []string // --recipient
+	DecRecipient []string // --dec-recipient
+}
 
 // processRecipientKeys sorts the array of recipients by type. Recipients may be either
 // x509 certificates, public keys, or PGP public keys identified by email address or name
@@ -194,12 +203,12 @@ func processPrivateKeyFiles(keyFilesAndPwds []string) ([][]byte, [][]byte, [][]b
 	return gpgSecretKeyRingFiles, gpgSecretKeyPasswords, privkeys, privkeysPasswords, pkcs11Yamls, keyProviders, nil
 }
 
-func createGPGClient(context *cli.Context) (ocicrypt.GPGClient, error) {
-	return ocicrypt.NewGPGClient(context.String("gpg-version"), context.String("gpg-homedir"))
+func CreateGPGClient(args EncArgs) (ocicrypt.GPGClient, error) {
+	return ocicrypt.NewGPGClient(args.GPGVersion, args.GPGHomedir)
 }
 
-func getGPGPrivateKeys(context *cli.Context, gpgSecretKeyRingFiles [][]byte, descs []ocispec.Descriptor, mustFindKey bool) (gpgPrivKeys [][]byte, gpgPrivKeysPwds [][]byte, err error) {
-	gpgClient, err := createGPGClient(context)
+func getGPGPrivateKeys(args EncArgs, gpgSecretKeyRingFiles [][]byte, descs []ocispec.Descriptor, mustFindKey bool) (gpgPrivKeys [][]byte, gpgPrivKeysPwds [][]byte, err error) {
+	gpgClient, err := CreateGPGClient(args)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -218,26 +227,26 @@ func getGPGPrivateKeys(context *cli.Context, gpgSecretKeyRingFiles [][]byte, des
 // CreateDecryptCryptoConfig creates the CryptoConfig object that contains the necessary
 // information to perform decryption from command line options and possibly
 // LayerInfos describing the image and helping us to query for the PGP decryption keys
-func CreateDecryptCryptoConfig(context *cli.Context, descs []ocispec.Descriptor) (encconfig.CryptoConfig, error) {
+func CreateDecryptCryptoConfig(args EncArgs, descs []ocispec.Descriptor) (encconfig.CryptoConfig, error) {
 	ccs := []encconfig.CryptoConfig{}
 
 	// x509 cert is needed for PKCS7 decryption
-	_, _, x509s, _, _, _, err := processRecipientKeys(context.StringSlice("dec-recipient"))
+	_, _, x509s, _, _, _, err := processRecipientKeys(args.DecRecipient)
 	if err != nil {
 		return encconfig.CryptoConfig{}, err
 	}
 
-	gpgSecretKeyRingFiles, gpgSecretKeyPasswords, privKeys, privKeysPasswords, pkcs11Yamls, keyProviders, err := processPrivateKeyFiles(context.StringSlice("key"))
+	gpgSecretKeyRingFiles, gpgSecretKeyPasswords, privKeys, privKeysPasswords, pkcs11Yamls, keyProviders, err := processPrivateKeyFiles(args.Key)
 	if err != nil {
 		return encconfig.CryptoConfig{}, err
 	}
 
-	_, err = createGPGClient(context)
+	_, err = CreateGPGClient(args)
 	gpgInstalled := err == nil
 	if gpgInstalled {
 		if len(gpgSecretKeyRingFiles) == 0 && len(privKeys) == 0 && len(pkcs11Yamls) == 0 && len(keyProviders) == 0 && descs != nil {
 			// Get pgp private keys from keyring only if no private key was passed
-			gpgPrivKeys, gpgPrivKeyPasswords, err := getGPGPrivateKeys(context, gpgSecretKeyRingFiles, descs, true)
+			gpgPrivKeys, gpgPrivKeyPasswords, err := getGPGPrivateKeys(args, gpgSecretKeyRingFiles, descs, true)
 			if err != nil {
 				return encconfig.CryptoConfig{}, err
 			}
@@ -294,14 +303,14 @@ func CreateDecryptCryptoConfig(context *cli.Context, descs []ocispec.Descriptor)
 }
 
 // CreateCryptoConfig from the list of recipient strings and list of key paths of private keys
-func CreateCryptoConfig(context *cli.Context, descs []ocispec.Descriptor) (encconfig.CryptoConfig, error) {
-	recipients := context.StringSlice("recipient")
-	keys := context.StringSlice("key")
+func CreateCryptoConfig(args EncArgs, descs []ocispec.Descriptor) (encconfig.CryptoConfig, error) {
+	recipients := args.Recipient
+	keys := args.Key
 
 	var decryptCc *encconfig.CryptoConfig
 	ccs := []encconfig.CryptoConfig{}
 	if len(keys) > 0 {
-		dcc, err := CreateDecryptCryptoConfig(context, descs)
+		dcc, err := CreateDecryptCryptoConfig(args, descs)
 		if err != nil {
 			return encconfig.CryptoConfig{}, err
 		}
@@ -316,7 +325,7 @@ func CreateCryptoConfig(context *cli.Context, descs []ocispec.Descriptor) (encco
 		}
 		encryptCcs := []encconfig.CryptoConfig{}
 
-		gpgClient, err := createGPGClient(context)
+		gpgClient, err := CreateGPGClient(args)
 		gpgInstalled := err == nil
 		if len(gpgRecipients) > 0 && gpgInstalled {
 			gpgPubRingFile, err := gpgClient.ReadGPGPubRingFile()
@@ -375,7 +384,6 @@ func CreateCryptoConfig(context *cli.Context, descs []ocispec.Descriptor) (encco
 
 	if len(ccs) > 0 {
 		return encconfig.CombineCryptoConfigs(ccs), nil
-	} else {
-		return encconfig.CryptoConfig{}, nil
 	}
+	return encconfig.CryptoConfig{}, nil
 }

@@ -29,6 +29,7 @@ import (
 	"github.com/containerd/imgcrypt"
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/flags"
 	"github.com/containerd/imgcrypt/images/encryption"
+	"github.com/containerd/imgcrypt/images/encryption/parsehelpers"
 
 	"github.com/opencontainers/image-spec/identity"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -125,7 +126,7 @@ command. As part of this process, we do the following:
 			p = append(p, platforms.DefaultSpec())
 		}
 
-		cc, err := CreateDecryptCryptoConfig(context, nil)
+		cc, err := parsehelpers.CreateDecryptCryptoConfig(ParseEncArgs(context), nil)
 		if err != nil {
 			return err
 		}

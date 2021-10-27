@@ -23,6 +23,7 @@ import (
 	"github.com/containerd/containerd/cmd/ctr/commands"
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/flags"
 	imgenc "github.com/containerd/imgcrypt/images/encryption"
+	"github.com/containerd/imgcrypt/images/encryption/parsehelpers"
 
 	"github.com/urfave/cli"
 )
@@ -84,7 +85,7 @@ var decryptCommand = cli.Command{
 			return nil
 		}
 
-		cc, err := CreateDecryptCryptoConfig(context, descs)
+		cc, err := parsehelpers.CreateDecryptCryptoConfig(ParseEncArgs(context), descs)
 		if err != nil {
 			return err
 		}
