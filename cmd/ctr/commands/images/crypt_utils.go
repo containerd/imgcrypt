@@ -26,7 +26,9 @@ import (
 	"github.com/containerd/containerd/platforms"
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/img"
 	imgenc "github.com/containerd/imgcrypt/images/encryption"
+	"github.com/containerd/imgcrypt/images/encryption/parsehelpers"
 	encconfig "github.com/containers/ocicrypt/config"
+	"github.com/urfave/cli"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
@@ -237,4 +239,14 @@ func parsePlatformArray(specifiers []string) ([]ocispec.Platform, error) {
 		speclist = append(speclist, spec)
 	}
 	return speclist, nil
+}
+
+func ParseEncArgs(context *cli.Context) parsehelpers.EncArgs {
+	return parsehelpers.EncArgs{
+		GPGHomedir:   context.String("gpg-homedir"),
+		GPGVersion:   context.String("gpg-version"),
+		Key:          context.StringSlice("key"),
+		Recipient:    context.StringSlice("recipient"),
+		DecRecipient: context.StringSlice("dec-recipient"),
+	}
 }

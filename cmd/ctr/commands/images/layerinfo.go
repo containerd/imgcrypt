@@ -26,6 +26,7 @@ import (
 
 	"github.com/containerd/containerd/cmd/ctr/commands"
 	"github.com/containerd/containerd/platforms"
+	"github.com/containerd/imgcrypt/images/encryption/parsehelpers"
 	"github.com/containers/ocicrypt"
 
 	"github.com/urfave/cli"
@@ -84,7 +85,7 @@ var layerinfoCommand = cli.Command{
 		var gpgClient ocicrypt.GPGClient
 		if !context.Bool("n") {
 			// create a GPG client to resolve keyIds to names
-			gpgClient, _ = createGPGClient(context)
+			gpgClient, _ = parsehelpers.CreateGPGClient(ParseEncArgs(context))
 		}
 
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', tabwriter.AlignRight)

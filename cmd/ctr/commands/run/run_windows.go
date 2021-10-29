@@ -27,6 +27,7 @@ import (
 	"github.com/containerd/imgcrypt/cmd/ctr/commands"
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/images"
 	"github.com/containerd/imgcrypt/images/encryption"
+	"github.com/containerd/imgcrypt/images/encryption/parsehelpers"
 
 	"github.com/Microsoft/hcsshim/cmd/containerd-shim-runhcs-v1/options"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
@@ -87,7 +88,7 @@ func NewContainer(ctx gocontext.Context, client *containerd.Client, context *cli
 			return nil, err
 		}
 		if !unpacked {
-			cc, err := images.CreateDecryptCryptoConfig(context, nil)
+			cc, err := parsehelpers.CreateDecryptCryptoConfig(images.ParseEncArgs(context), nil)
 			if err != nil {
 				return nil, err
 			}
@@ -152,7 +153,7 @@ func NewContainer(ctx gocontext.Context, client *containerd.Client, context *cli
 
 	cOpts = append(cOpts, spec)
 
-	cc, err := images.CreateDecryptCryptoConfig(context, nil)
+	cc, err := parsehelpers.CreateDecryptCryptoConfig(images.ParseEncArgs(context), nil)
 	if err != nil {
 		return nil, err
 	}
