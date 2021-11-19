@@ -56,7 +56,7 @@ jobs:
 
       - uses: golangci/golangci-lint-action@v2
         with:
-          version: v1.29
+          version: v1.42.0
           working-directory: src/github.com/containerd/imgcrypt
 
   tests:
