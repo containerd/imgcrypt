@@ -40,6 +40,9 @@ NGINX=docker.io/library/nginx:latest
 NGINX_ENC=docker.io/library/nginx:enc
 NGINX_DEC=docker.io/library/nginx:dec
 
+BASH=docker.io/library/bash:latest
+BASH_ENC=docker.io/library/bash:enc
+
 # gpg2 --export-secret-key ...
 GPGTESTKEY1="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"
 GPGTESTKEY2="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"
@@ -162,12 +165,16 @@ pullImages() {
 	if [ -z "$IMAGE_PULL_CREDS" ]; then
 		echo "Note: Image pull credentials can be passed with env. variable IMAGE_PULL_CREDS=<username>:<password>"
 	fi
-	$CTR images rm --sync ${ALPINE_ENC} ${ALPINE_DEC} ${NGINX_ENC} ${NGINX_DEC} &>/dev/null
+	$CTR images rm --sync ${ALPINE_ENC} ${ALPINE_DEC} ${NGINX_ENC} ${NGINX_DEC} ${BASH_ENC} &>/dev/null
 	$CTR images pull ${IMAGE_PULL_CREDS:+--user ${IMAGE_PULL_CREDS}} --all-platforms ${ALPINE} &>/dev/null
 	failExit $? "Image pull failed on ${ALPINE}"
 
 	$CTR images pull ${IMAGE_PULL_CREDS:+--user ${IMAGE_PULL_CREDS}} --platform linux/amd64 ${NGINX} &>/dev/null
 	failExit $? "Image pull failed on ${NGINX}"
+
+	# pull bash only for local platform
+	$CTR images pull ${IMAGE_PULL_CREDS:+--user ${IMAGE_PULL_CREDS}} ${BASH} &>/dev/null
+	failExit $? "Image pull failed on ${BASH}"
 
 	LAYER_INFO_ALPINE="$($CTR images layerinfo ${ALPINE})"
 	failExit $? "Image layerinfo on plain image failed"
@@ -278,6 +285,14 @@ testPGP() {
 
 	# remove ${ALPINE} and ${ALPINE_ENC} to clear cached and so we need to decrypt
 	$CTR images rm --sync ${ALPINE} ${ALPINE_ENC} &>/dev/null
+	# to avoid caching effects of the image we just decrypted and then exported,
+	# remove all snapshots to simulate a clean system for import
+	# The following is a brute-force removal ignoring dependencies
+	while [ -n "$($CTR snapshot ls | tail -n +2)" ]; do
+		for v in $($CTR snapshot ls | tail -n +2 | cut -d" " -f1); do
+			$CTR snapshot rm $v &>/dev/null
+		done
+	done
 
 	$CTR images import \
 		--all-platforms \
@@ -611,6 +626,49 @@ testJWE() {
 	echo "PASS: JWE encryption with a JWK"
 
 	$CTR images rm --sync ${ALPINE_DEC} ${ALPINE_ENC} &>/dev/null
+	echo
+	echo "Testing creation of container from encrypted image"
+
+	recipient=jwe:${PUBKEYJWK}
+	$CTR images encrypt \
+		--recipient ${recipient} \
+		${BASH} ${BASH_ENC}
+	failExit $? "Image encryption with JWE failed; public key: ${recipient}"
+
+	MSG=$($CTR container rm testcontainer1 2>&1)
+	MSG=$($CTR snapshot rm testcontainer1 2>&1)
+	MSG=$(sudo $CTR container create ${BASH_ENC} testcontainer1 2>&1)
+	if [ $? -eq 0 ]; then
+		MSG=$($CTR container rm testcontainer1 2>&1)
+		MSG=$($CTR snapshot rm testcontainer1 2>&1)
+		failExit 1 "Should not have been able to create a container from encrypted image without passing keys"
+	fi
+	MSG=$($CTR snapshot rm testcontainer1 2>&1)
+	MSG=$(sudo bash -c "$CTR container create \
+		--key ${PRIVKEYJWK} \
+		${BASH_ENC} testcontainer1 2>&1")
+	failExit $? "Should have been able to create a container from encrypted image when passing keys\n${MSG}"
+	MSG=$($CTR container rm testcontainer1 2>&1)
+	MSG=$($CTR snapshot rm testcontainer1 2>&1)
+
+	MSG=$(sudo bash -c "$CTR run \
+		--rm \
+		${BASH_ENC} testcontainer1 echo 'Hello world'" 2>&1)
+	if [ $? -eq 0 ]; then
+		MSG=$($CTR snapshot rm testcontainer1 2>&1)
+		failExit 1 "Should not have been able to run a container from encrypted image without passing keys"
+	fi
+	MSG=$($CTR snapshot rm testcontainer1 2>&1)
+	MSG=$(sudo bash -c "$CTR run \
+		--key ${PRIVKEYJWK} \
+		--rm \
+		${BASH_ENC} testcontainer1 echo 'Hello world'" 2>&1)
+	failExit $? "Should have been able to run a container from encrypted image when passing keys\n${MSG}"
+
+	$CTR images rm --sync ${BASH_ENC} &>/dev/null
+
+	echo "PASS: Creation of container from encrypted image"
+	echo
 }
 
 testLocalKeys() {
