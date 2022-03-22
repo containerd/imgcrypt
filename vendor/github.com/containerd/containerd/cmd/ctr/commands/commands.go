@@ -37,6 +37,12 @@ var (
 		},
 	}
 
+	// SnapshotterLabels are cli flags specifying labels which will be add to the new snapshot for container.
+	SnapshotterLabels = cli.StringSliceFlag{
+		Name:  "snapshotter-label",
+		Usage: "labels added to the new snapshot for this container.",
+	}
+
 	// LabelFlag is a cli flag specifying labels
 	LabelFlag = cli.StringSliceFlag{
 		Name:  "label",
@@ -147,7 +153,7 @@ var (
 			Name:  "pid-file",
 			Usage: "file path to write the task's pid",
 		},
-		cli.IntFlag{
+		cli.IntSliceFlag{
 			Name:  "gpus",
 			Usage: "add gpus to the container",
 		},
@@ -162,6 +168,14 @@ var (
 		cli.StringSliceFlag{
 			Name:  "device",
 			Usage: "file path to a device to add to the container; or a path to a directory tree of devices to add to the container",
+		},
+		cli.StringSliceFlag{
+			Name:  "cap-add",
+			Usage: "add Linux capabilities (Set capabilities with 'CAP_' prefix)",
+		},
+		cli.StringSliceFlag{
+			Name:  "cap-drop",
+			Usage: "drop Linux capabilities (Set capabilities with 'CAP_' prefix)",
 		},
 		cli.BoolFlag{
 			Name:  "seccomp",
@@ -178,6 +192,10 @@ var (
 		cli.StringFlag{
 			Name:  "apparmor-profile",
 			Usage: "enable AppArmor with an existing custom profile",
+		},
+		cli.StringFlag{
+			Name:  "rdt-class",
+			Usage: "name of the RDT class to associate the container with. Specifies a Class of Service (CLOS) for cache and memory bandwidth management.",
 		},
 	}
 )

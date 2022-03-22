@@ -1,3 +1,4 @@
+//go:build linux
 // +build linux
 
 /*
@@ -24,15 +25,13 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
-	"os/exec"
 	"path"
 	"strconv"
 	"strings"
 	"text/template"
 
-	"github.com/pkg/errors"
+	exec "golang.org/x/sys/execabs"
 )
 
 // NOTE: This code is copied from <github.com/docker/docker/profiles/apparmor>.
@@ -125,12 +124,12 @@ func loadData(name string) (*data, error) {
 	}
 	ver, err := getVersion()
 	if err != nil {
-		return nil, errors.Wrap(err, "get apparmor_parser version")
+		return nil, fmt.Errorf("get apparmor_parser version: %w", err)
 	}
 	p.Version = ver
 
 	// Figure out the daemon profile.
-	currentProfile, err := ioutil.ReadFile("/proc/self/attr/current")
+	currentProfile, err := os.ReadFile("/proc/self/attr/current")
 	if err != nil {
 		// If we couldn't get the daemon profile, assume we are running
 		// unconfined which is generally the default.
@@ -152,7 +151,7 @@ func generate(p *data, o io.Writer) error {
 func load(path string) error {
 	out, err := aaParser("-Kr", path)
 	if err != nil {
-		return errors.Errorf("%s: %s", err, out)
+		return fmt.Errorf("parser error(%q): %w", strings.TrimSpace(out), err)
 	}
 	return nil
 }
@@ -165,10 +164,7 @@ func macroExists(m string) bool {
 
 func aaParser(args ...string) (string, error) {
 	out, err := exec.Command("apparmor_parser", args...).CombinedOutput()
-	if err != nil {
-		return "", err
-	}
-	return string(out), nil
+	return string(out), err
 }
 
 func getVersion() (int, error) {

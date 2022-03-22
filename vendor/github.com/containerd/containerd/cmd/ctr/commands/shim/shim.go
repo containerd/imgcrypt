@@ -1,3 +1,4 @@
+//go:build !windows
 // +build !windows
 
 /*
@@ -20,9 +21,10 @@ package shim
 
 import (
 	gocontext "context"
+	"errors"
 	"fmt"
-	"io/ioutil"
 	"net"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -35,7 +37,6 @@ import (
 	"github.com/containerd/typeurl"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/opencontainers/runtime-spec/specs-go"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -173,7 +174,7 @@ var execCommand = cli.Command{
 		}
 
 		// read spec file and extract Any object
-		spec, err := ioutil.ReadFile(context.String("spec"))
+		spec, err := os.ReadFile(context.String("spec"))
 		if err != nil {
 			return err
 		}
