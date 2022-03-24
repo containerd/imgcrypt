@@ -20,7 +20,8 @@ package config
 import (
 	"context"
 	"crypto/tls"
-	"io/ioutil"
+	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"net/url"
@@ -35,7 +36,6 @@ import (
 	"github.com/containerd/containerd/log"
 	"github.com/containerd/containerd/remotes/docker"
 	"github.com/pelletier/go-toml"
-	"github.com/pkg/errors"
 )
 
 // UpdateClientFunc is a function that lets you to amend http Client behavior used by registry clients.
@@ -54,8 +54,6 @@ type hostConfig struct {
 
 	header http.Header
 
-	// TODO: API ("docker" or "oci")
-	// TODO: API Version ("v1", "v2")
 	// TODO: Add credential configuration (domain alias, username)
 }
 
@@ -66,7 +64,8 @@ type HostOptions struct {
 	DefaultTLS    *tls.Config
 	DefaultScheme string
 	// UpdateClient will be called after creating http.Client object, so clients can provide extra configuration
-	UpdateClient UpdateClientFunc
+	UpdateClient   UpdateClientFunc
+	AuthorizerOpts []docker.AuthorizerOpt
 }
 
 // ConfigureHosts creates a registry hosts function from the provided
@@ -146,6 +145,7 @@ func ConfigureHosts(ctx context.Context, options HostOptions) docker.RegistryHos
 		if options.Credentials != nil {
 			authOpts = append(authOpts, docker.WithAuthCreds(options.Credentials))
 		}
+		authOpts = append(authOpts, options.AuthorizerOpts...)
 		authorizer := docker.NewDockerAuthorizer(authOpts...)
 
 		rhosts := make([]docker.RegistryHost, len(hosts))
@@ -167,32 +167,32 @@ func ConfigureHosts(ctx context.Context, options HostOptions) docker.RegistryHos
 					if tlsConfig.RootCAs == nil {
 						rootPool, err := rootSystemPool()
 						if err != nil {
-							return nil, errors.Wrap(err, "unable to initialize cert pool")
+							return nil, fmt.Errorf("unable to initialize cert pool: %w", err)
 						}
 						tlsConfig.RootCAs = rootPool
 					}
 					for _, f := range host.caCerts {
-						data, err := ioutil.ReadFile(f)
+						data, err := os.ReadFile(f)
 						if err != nil {
-							return nil, errors.Wrapf(err, "unable to read CA cert %q", f)
+							return nil, fmt.Errorf("unable to read CA cert %q: %w", f, err)
 						}
 						if !tlsConfig.RootCAs.AppendCertsFromPEM(data) {
-							return nil, errors.Errorf("unable to load CA cert %q", f)
+							return nil, fmt.Errorf("unable to load CA cert %q", f)
 						}
 					}
 				}
 
 				if host.clientPairs != nil {
 					for _, pair := range host.clientPairs {
-						certPEMBlock, err := ioutil.ReadFile(pair[0])
+						certPEMBlock, err := os.ReadFile(pair[0])
 						if err != nil {
-							return nil, errors.Wrapf(err, "unable to read CERT file %q", pair[0])
+							return nil, fmt.Errorf("unable to read CERT file %q: %w", pair[0], err)
 						}
 						var keyPEMBlock []byte
 						if pair[1] != "" {
-							keyPEMBlock, err = ioutil.ReadFile(pair[1])
+							keyPEMBlock, err = os.ReadFile(pair[1])
 							if err != nil {
-								return nil, errors.Wrapf(err, "unable to read CERT file %q", pair[1])
+								return nil, fmt.Errorf("unable to read CERT file %q: %w", pair[1], err)
 							}
 						} else {
 							// Load key block from same PEM file
@@ -200,7 +200,7 @@ func ConfigureHosts(ctx context.Context, options HostOptions) docker.RegistryHos
 						}
 						cert, err := tls.X509KeyPair(certPEMBlock, keyPEMBlock)
 						if err != nil {
-							return nil, errors.Wrap(err, "failed to load X509 key pair")
+							return nil, fmt.Errorf("failed to load X509 key pair: %w", err)
 						}
 
 						tlsConfig.Certificates = append(tlsConfig.Certificates, cert)
@@ -253,7 +253,7 @@ func hostDirectory(host string) string {
 }
 
 func loadHostDir(ctx context.Context, hostsDir string) ([]hostConfig, error) {
-	b, err := ioutil.ReadFile(filepath.Join(hostsDir, "hosts.toml"))
+	b, err := os.ReadFile(filepath.Join(hostsDir, "hosts.toml"))
 	if err != nil && !os.IsNotExist(err) {
 		return nil, err
 	}
@@ -283,25 +283,40 @@ type hostFileConfig struct {
 	//  - push
 	Capabilities []string `toml:"capabilities"`
 
-	// CACert can be a string or an array of strings
+	// CACert are the public key certificates for TLS
+	// Accepted types
+	// - string - Single file with certificate(s)
+	// - []string - Multiple files with certificates
 	CACert interface{} `toml:"ca"`
 
-	// TODO: Make this an array (two key types, one for pairs (multiple files), one for single file?)
+	// Client keypair(s) for TLS with client authentication
+	// Accepted types
+	// - string - Single file with public and private keys
+	// - []string - Multiple files with public and private keys
+	// - [][2]string - Multiple keypairs with public and private keys in separate files
 	Client interface{} `toml:"client"`
 
+	// SkipVerify skips verification of the server's certificate chain
+	// and host name. This should only be used for testing or in
+	// combination with other methods of verifying connections.
 	SkipVerify *bool `toml:"skip_verify"`
 
+	// Header are additional header files to send to the server
 	Header map[string]interface{} `toml:"header"`
 
-	// API (default: "docker")
-	// API Version (default: "v2")
-	// Credentials: helper? name? username? alternate domain? token?
+	// OverridePath indicates the API root endpoint is defined in the URL
+	// path rather than by the API specification.
+	// This may be used with non-compliant OCI registries to override the
+	// API root endpoint.
+	OverridePath bool `toml:"override_path"`
+
+	// TODO: Credentials: helper? name? username? alternate domain? token?
 }
 
 func parseHostsFile(baseDir string, b []byte) ([]hostConfig, error) {
 	tree, err := toml.LoadBytes(b)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to parse TOML")
+		return nil, fmt.Errorf("failed to parse TOML: %w", err)
 	}
 
 	// HACK: we want to keep toml parsing structures private in this package, however go-toml ignores private embedded types.
@@ -363,20 +378,16 @@ func parseHostConfig(server string, baseDir string, config hostFileConfig) (host
 		}
 		u, err := url.Parse(server)
 		if err != nil {
-			return hostConfig{}, errors.Wrapf(err, "unable to parse server %v", server)
+			return hostConfig{}, fmt.Errorf("unable to parse server %v: %w", server, err)
 		}
 		result.scheme = u.Scheme
 		result.host = u.Host
-		// TODO: Handle path based on registry protocol
-		// Define a registry protocol type
-		//   OCI v1    - Always use given path as is
-		//   Docker v2 - Always ensure ends with /v2/
 		if len(u.Path) > 0 {
 			u.Path = path.Clean(u.Path)
-			if !strings.HasSuffix(u.Path, "/v2") {
+			if !strings.HasSuffix(u.Path, "/v2") && !config.OverridePath {
 				u.Path = u.Path + "/v2"
 			}
-		} else {
+		} else if !config.OverridePath {
 			u.Path = "/v2"
 		}
 		result.path = u.Path
@@ -394,7 +405,7 @@ func parseHostConfig(server string, baseDir string, config hostFileConfig) (host
 			case "push":
 				result.capabilities |= docker.HostCapabilityPush
 			default:
-				return hostConfig{}, errors.Errorf("unknown capability %v", c)
+				return hostConfig{}, fmt.Errorf("unknown capability %v", c)
 			}
 		}
 	} else {
@@ -413,7 +424,7 @@ func parseHostConfig(server string, baseDir string, config hostFileConfig) (host
 				return hostConfig{}, err
 			}
 		default:
-			return hostConfig{}, errors.Errorf("invalid type %v for \"ca\"", cert)
+			return hostConfig{}, fmt.Errorf("invalid type %v for \"ca\"", cert)
 		}
 	}
 
@@ -435,18 +446,18 @@ func parseHostConfig(server string, baseDir string, config hostFileConfig) (host
 						return hostConfig{}, err
 					}
 					if len(slice) != 2 {
-						return hostConfig{}, errors.Errorf("invalid pair %v for \"client\"", p)
+						return hostConfig{}, fmt.Errorf("invalid pair %v for \"client\"", p)
 					}
 
 					var pair [2]string
 					copy(pair[:], slice)
 					result.clientPairs = append(result.clientPairs, pair)
 				default:
-					return hostConfig{}, errors.Errorf("invalid type %T for \"client\"", p)
+					return hostConfig{}, fmt.Errorf("invalid type %T for \"client\"", p)
 				}
 			}
 		default:
-			return hostConfig{}, errors.Errorf("invalid type %v for \"client\"", client)
+			return hostConfig{}, fmt.Errorf("invalid type %v for \"client\"", client)
 		}
 	}
 
@@ -462,7 +473,7 @@ func parseHostConfig(server string, baseDir string, config hostFileConfig) (host
 					return hostConfig{}, err
 				}
 			default:
-				return hostConfig{}, errors.Errorf("invalid type %v for header %q", ty, key)
+				return hostConfig{}, fmt.Errorf("invalid type %v for header %q", ty, key)
 			}
 		}
 		result.header = header
@@ -475,7 +486,7 @@ func parseHostConfig(server string, baseDir string, config hostFileConfig) (host
 func getSortedHosts(root *toml.Tree) ([]string, error) {
 	iter, ok := root.Get("host").(*toml.Tree)
 	if !ok {
-		return nil, errors.Errorf("invalid `host` tree")
+		return nil, errors.New("invalid `host` tree")
 	}
 
 	list := append([]string{}, iter.Keys()...)
@@ -498,7 +509,7 @@ func makeStringSlice(slice []interface{}, cb func(string) string) ([]string, err
 	for i, value := range slice {
 		str, ok := value.(string)
 		if !ok {
-			return nil, errors.Errorf("unable to cast %v to string", value)
+			return nil, fmt.Errorf("unable to cast %v to string", value)
 		}
 
 		if cb != nil {
@@ -527,7 +538,7 @@ func makeAbsPath(p string, base string) string {
 //   the ".cert", which may contain the private key. If the ".cert" file
 //   does not contain the private key, the caller should detect and error.
 func loadCertFiles(ctx context.Context, certsDir string) ([]hostConfig, error) {
-	fs, err := ioutil.ReadDir(certsDir)
+	fs, err := os.ReadDir(certsDir)
 	if err != nil && !os.IsNotExist(err) {
 		return nil, err
 	}

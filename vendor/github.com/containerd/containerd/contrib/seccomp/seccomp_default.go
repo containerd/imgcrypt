@@ -1,3 +1,4 @@
+//go:build linux
 // +build linux
 
 /*
@@ -127,6 +128,7 @@ func DefaultProfile(sp *specs.Spec) *specs.LinuxSeccomp {
 				"ftruncate64",
 				"futex",
 				"futex_time64",
+				"futex_waitv",
 				"futimesat",
 				"getcpu",
 				"getcwd",
@@ -183,6 +185,9 @@ func DefaultProfile(sp *specs.Spec) *specs.LinuxSeccomp {
 				"io_uring_setup",
 				"ipc",
 				"kill",
+				"landlock_add_rule",
+				"landlock_create_ruleset",
+				"landlock_restrict_self",
 				"lchown",
 				"lchown32",
 				"lgetxattr",
@@ -200,6 +205,7 @@ func DefaultProfile(sp *specs.Spec) *specs.LinuxSeccomp {
 				"madvise",
 				"membarrier",
 				"memfd_create",
+				"memfd_secret",
 				"mincore",
 				"mkdir",
 				"mkdirat",
@@ -247,6 +253,7 @@ func DefaultProfile(sp *specs.Spec) *specs.LinuxSeccomp {
 				"preadv",
 				"preadv2",
 				"prlimit64",
+				"process_mrelease",
 				"pselect6",
 				"pselect6_time64",
 				"pwrite64",
@@ -466,6 +473,7 @@ func DefaultProfile(sp *specs.Spec) *specs.LinuxSeccomp {
 		s.Syscalls = append(s.Syscalls, specs.LinuxSyscall{
 			Names: []string{
 				"sync_file_range2",
+				"swapcontext",
 			},
 			Action: specs.ActAllow,
 			Args:   []specs.LinuxSeccompArg{},
@@ -535,11 +543,13 @@ func DefaultProfile(sp *specs.Spec) *specs.LinuxSeccomp {
 					"fspick",
 					"lookup_dcookie",
 					"mount",
+					"mount_setattr",
 					"move_mount",
 					"name_to_handle_at",
 					"open_tree",
 					"perf_event_open",
 					"quotactl",
+					"quotactl_fd",
 					"setdomainname",
 					"sethostname",
 					"setns",
