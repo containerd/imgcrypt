@@ -26,7 +26,7 @@ func TestFromAny(t *testing.T) {
 	pbany := &types.Any{}
 
 	var testcases = []struct {
-		input    any
+		input    pbAny
 		expected *types.Any
 	}{
 		{input: nil, expected: nil},
