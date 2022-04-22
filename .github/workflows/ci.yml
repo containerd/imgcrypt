@@ -40,7 +40,6 @@ jobs:
 
     strategy:
       matrix:
-        go-version: [1.17]
         os: [ubuntu-18.04]
 
     steps:
@@ -60,8 +59,13 @@ jobs:
           working-directory: src/github.com/containerd/imgcrypt
 
   tests:
-    name: Linux Tests
-    runs-on: ubuntu-18.04
+    strategy:
+      matrix:
+        go: [1.17, 1.18]
+        os: [ubuntu-18.04, windows-2019]
+
+    name: Tests / ${{ matrix.os }} / ${{ matrix.go }}
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     needs: [linters, checks]
 
@@ -77,7 +81,7 @@ jobs:
 
       - uses: actions/setup-go@v2
         with:
-          go-version: 1.17
+          go-version: ${{ matrix.go }}
 
       - name: Set env
         shell: bash
@@ -85,20 +89,30 @@ jobs:
           echo "GOPATH=${{ github.workspace }}" >> $GITHUB_ENV
           echo "${{ github.workspace }}/bin" >> $GITHUB_PATH
 
+      - name: Tests
+        run: |
+          make test
+          make
+        working-directory: src/github.com/containerd/imgcrypt
+
       - name: Dependencies
         shell: bash
+        if: ${{ startsWith(matrix.os, 'ubuntu-') }}
         run: |
           sudo apt update
           sudo apt install gnutls-bin softhsm2 libseccomp-dev
           make binaries
           sudo make install
           sudo rm /usr/local/bin/ctr
+
           mkdir ../../lumjjb && pushd ../../lumjjb
           git clone https://github.com/lumjjb/simple-ocicrypt-keyprovider && cd simple-ocicrypt-keyprovider
           make
           sudo cp simple_crypt /usr/local/bin
           popd
+
           RUNC_COMMIT=$(grep opencontainers/runc go.mod | awk '{print $2}')
+
           pushd ../..
           rm -fR opencontainers/runc && mkdir -p opencontainers && cd opencontainers
           git clone https://github.com/opencontainers/runc.git && cd runc
@@ -108,34 +122,9 @@ jobs:
           popd
         working-directory: src/github.com/containerd/containerd
 
-      - run: |
-          make test
-          make
-          CONTAINERD=$(type -P containerd) KEYPROVIDER=/usr/local/bin/simple_crypt ./script/tests/test_encryption.sh
-        working-directory: src/github.com/containerd/imgcrypt
-
-  windows-tests:
-    name: Windows Tests
-    runs-on: windows-2019
-    timeout-minutes: 15
-    needs: [linters, checks]
-
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          path: src/github.com/containerd/imgcrypt
-
-      - uses: actions/setup-go@v2
-        with:
-          go-version: 1.17
-
-      - name: Set env
+      - name: Integration Tests
         shell: bash
+        if: ${{ startsWith(matrix.os, 'ubuntu-') }}
         run: |
-          echo "GOPATH=${{ github.workspace }}" >> $GITHUB_ENV
-          echo "${{ github.workspace }}/bin" >> $GITHUB_PATH
-
-      - run: |
-          make test
-          make
+          CONTAINERD=$(type -P containerd) KEYPROVIDER=/usr/local/bin/simple_crypt ./script/tests/test_encryption.sh
         working-directory: src/github.com/containerd/imgcrypt
