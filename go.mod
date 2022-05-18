@@ -9,7 +9,7 @@ require (
 	github.com/containerd/containerd v1.6.1
 	github.com/containerd/go-cni v1.1.3
 	github.com/containerd/typeurl v1.0.2
-	github.com/containers/ocicrypt v1.1.3
+	github.com/containers/ocicrypt v1.1.4
 	github.com/gogo/protobuf v1.3.2
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.0.2
