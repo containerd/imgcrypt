@@ -1,5 +1,10 @@
 CHANGES
 
+v1.1.5:
+  - Update to ocicrypt v1.1.4; sha256 is the default now for padding in OAEP
+    for pkcs11; Set OCICRYPT_OAEP_HASHALG=sha1 environment variable to force
+    sha1 usage, which is required for example for SoftHSM 2.6.1.
+
 v1.1.4:
   - Fixed issue in CheckAuthorization() callpath for images with a ManifestList
     - CVE-2022-24778
