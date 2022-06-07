@@ -1,5 +1,9 @@
 CHANGES
 
+v1.1.6:
+  - Update to ocicrypt v1.1.5 for yaml v3.0 dependency
+  - Update to containerd v1.6.6 for runc v1.1.2 dependency
+
 v1.1.5:
   - Update to ocicrypt v1.1.4; sha256 is the default now for padding in OAEP
     for pkcs11; Set OCICRYPT_OAEP_HASHALG=sha1 environment variable to force
