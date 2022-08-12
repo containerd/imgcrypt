@@ -143,6 +143,9 @@ func EncryptLayer(ec *config.EncryptConfig, encOrPlainLayerReader io.Reader, des
 
 		newAnnotations := make(map[string]string)
 		keysWrapped := false
+		if len(keyWrapperAnnotations)==0{
+			return nil, errors.New("missing Annotations needed for decryption")
+		}
 		for annotationsID, scheme := range keyWrapperAnnotations {
 			b64Annotations := desc.Annotations[annotationsID]
 			keywrapper := GetKeyWrapper(scheme)
@@ -211,6 +214,9 @@ func DecryptLayer(dc *config.DecryptConfig, encLayerReader io.Reader, desc ocisp
 func decryptLayerKeyOptsData(dc *config.DecryptConfig, desc ocispec.Descriptor) ([]byte, error) {
 	privKeyGiven := false
 	errs := ""
+	if len(keyWrapperAnnotations)==0{
+		return nil, errors.New("missing Annotations needed for decryption")
+	}
 	for annotationsID, scheme := range keyWrapperAnnotations {
 		b64Annotation := desc.Annotations[annotationsID]
 		if b64Annotation != "" {
