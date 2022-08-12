@@ -4,7 +4,7 @@ Project `imgcrypt` is a non-core subproject of containerd.
 
 The `imgcrypt` library provides API exensions for containerd to support encrypted container images and implements
 the `ctd-decoder` command line tool for use by containerd to decrypt encrypted container images. An extended version
-of containerd's `ctr` tool (`ctr-enc') with support for encrypting and decrypting container images is also provided.
+of containerd's `ctr` tool (`ctr-enc`) with support for encrypting and decrypting container images is also provided.
 
 `imgcrypt` relies on the [`ocicrypt`](https://github.com/containers/ocicrypt) library for crypto functions on image layers.
 
