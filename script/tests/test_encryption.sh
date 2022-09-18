@@ -426,10 +426,9 @@ testPGP() {
 }
 
 createJWEKeys() {
-	local rc
+	local rc traditional
 
 	echo "Generating keys for JWE encryption"
-
 	PRIVKEYPEM=${WORKDIR}/mykey.pem
 	PRIVKEYDER=${WORKDIR}/mykey.der
 	PRIVKEYPK8PEM=${WORKDIR}/mykeypk8.pem
@@ -450,6 +449,8 @@ createJWEKeys() {
 
 	ECPRIVKEYDER=${WORKDIR}/myeckey.der
 	ECPUBKEYDER=${WORKDIR}/myecpubkey.der
+
+	traditional=$(openssl genrsa --help 2>&1| sed -n 's/.*\(-traditional\).*/\1/p')
 
 	MSG="$(openssl genrsa -out ${PRIVKEYPEM} 2>&1)"
 	failExit $? "Could not generate private key\n$MSG"
@@ -475,10 +476,10 @@ createJWEKeys() {
 	MSG="$(openssl rsa -inform pem -outform pem -pubout -in ${PRIVKEY2PEM} -out ${PUBKEY2PEM} 2>&1)"
 	failExit $? "Could not write 2nd public key in PEM format\n$MSG"
 
-	MSG="$(openssl genrsa -aes256 -passout pass:${PRIVKEY3PASSWORD} -out ${PRIVKEY3PASSPEM} 2>&1)"
+	MSG="$(openssl genrsa ${traditional} -aes256 -passout pass:${PRIVKEY3PASSWORD} -out ${PRIVKEY3PASSPEM} 2>&1)"
 	failExit $? "Could not generate 3rd private key\n$MSG"
 
-	MSG="$(openssl rsa -inform pem -outform pem -passin pass:${PRIVKEY3PASSWORD} -pubout -in ${PRIVKEY3PASSPEM} -out ${PUBKEY3PEM} 2>&1)"
+	MSG="$(openssl rsa ${traditional} -inform pem -outform pem -passin pass:${PRIVKEY3PASSWORD} -pubout -in ${PRIVKEY3PASSPEM} -out ${PUBKEY3PEM} 2>&1)"
 	failExit $? "Could not write 3rd public key in PEM format\n$MSG"
 
 	MSG="$(openssl ecparam -genkey -out ${ECPRIVKEYDER} -outform der -name secp521r1 2>&1)"
