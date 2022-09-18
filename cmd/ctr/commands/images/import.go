@@ -184,7 +184,11 @@ decrypting the image later on.
 
 				// TODO: Show unpack status
 				fmt.Printf("unpacking %s (%s)...", img.Name, img.Target.Digest)
-				err = image.Unpack(ctx, context.String("snapshotter"), opts)
+				if context.IsSet("skip-decrypt-auth") {
+					err = image.Unpack(ctx, context.String("snapshotter"))
+				} else {
+					err = image.Unpack(ctx, context.String("snapshotter"), opts)
+				}
 				if err != nil {
 					return err
 				}
