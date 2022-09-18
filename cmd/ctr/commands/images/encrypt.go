@@ -55,6 +55,9 @@ var encryptCommand = cli.Command{
 	}, cli.IntSliceFlag{
 		Name:  "layer",
 		Usage: "The layer to encrypt; this must be either the layer number or a negative number starting with -1 for topmost layer",
+	}, cli.BoolFlag{
+		Name:  "all-platforms",
+		Usage: "encrypt for all platforms; this is the default",
 	}, cli.StringSliceFlag{
 		Name:  "platform",
 		Usage: "For which platform to encrypt; by default encrytion is done for all platforms",
