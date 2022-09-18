@@ -5,7 +5,7 @@ github.com/Microsoft/go-winio/backuptar
 github.com/Microsoft/go-winio/pkg/guid
 github.com/Microsoft/go-winio/pkg/security
 github.com/Microsoft/go-winio/vhd
-# github.com/Microsoft/hcsshim v0.9.3
+# github.com/Microsoft/hcsshim v0.9.4
 ## explicit
 github.com/Microsoft/hcsshim
 github.com/Microsoft/hcsshim/cmd/containerd-shim-runhcs-v1/options
@@ -47,7 +47,7 @@ github.com/containerd/cgroups/v2/stats
 # github.com/containerd/console v1.0.3
 ## explicit
 github.com/containerd/console
-# github.com/containerd/containerd v1.6.6
+# github.com/containerd/containerd v1.6.8
 ## explicit
 github.com/containerd/containerd
 github.com/containerd/containerd/api/events
@@ -87,6 +87,7 @@ github.com/containerd/containerd/content/proxy
 github.com/containerd/containerd/contrib/apparmor
 github.com/containerd/containerd/contrib/nvidia
 github.com/containerd/containerd/contrib/seccomp
+github.com/containerd/containerd/contrib/seccomp/kernelversion
 github.com/containerd/containerd/defaults
 github.com/containerd/containerd/diff
 github.com/containerd/containerd/errdefs

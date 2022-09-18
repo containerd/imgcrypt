@@ -4,9 +4,9 @@ go 1.16
 
 require (
 	github.com/Microsoft/go-winio v0.5.1
-	github.com/Microsoft/hcsshim v0.9.3
+	github.com/Microsoft/hcsshim v0.9.4
 	github.com/containerd/console v1.0.3
-	github.com/containerd/containerd v1.6.6
+	github.com/containerd/containerd v1.6.8
 	github.com/containerd/go-cni v1.1.6
 	github.com/containerd/typeurl v1.0.2
 	github.com/containers/ocicrypt v1.1.5
