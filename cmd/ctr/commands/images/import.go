@@ -54,6 +54,10 @@ e.g.
 
 If foobar.tar contains an OCI ref named "latest" and anonymous ref "sha256:deadbeef", the command will create
 "foo/bar:latest" and "foo/bar@sha256:deadbeef" images in the containerd store.
+
+Import of an encrypted image requires the decryption key to be passed. Even though the image will not be
+decrypted it is required that the user proofs to be in possession of one of the decryption keys needed for
+decrypting the image later on.
 `,
 	Flags: append(append([]cli.Flag{
 		cli.StringFlag{
