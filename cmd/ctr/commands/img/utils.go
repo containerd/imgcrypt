@@ -57,8 +57,9 @@ func GetImageLayerDescriptors(ctx context.Context, cs content.Store, desc ocispe
 
 			switch child.MediaType {
 			case images.MediaTypeDockerSchema2LayerGzip, images.MediaTypeDockerSchema2Layer,
-				ocispec.MediaTypeImageLayerGzip, ocispec.MediaTypeImageLayer,
-				encocispec.MediaTypeLayerGzipEnc, encocispec.MediaTypeLayerEnc:
+				ocispec.MediaTypeImageLayerGzip, ocispec.MediaTypeImageLayerZstd, ocispec.MediaTypeImageLayer,
+				encocispec.MediaTypeLayerGzipEnc, encocispec.MediaTypeLayerEnc,
+				encocispec.MediaTypeLayerZstdEnc:
 				tdesc := child
 				tdesc.Platform = platform
 				tmp = append(tmp, tdesc)
