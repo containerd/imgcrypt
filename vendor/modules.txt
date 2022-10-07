@@ -163,7 +163,7 @@ github.com/containernetworking/cni/pkg/types/create
 github.com/containernetworking/cni/pkg/types/internal
 github.com/containernetworking/cni/pkg/utils
 github.com/containernetworking/cni/pkg/version
-# github.com/containers/ocicrypt v1.1.5
+# github.com/containers/ocicrypt v1.1.6
 ## explicit
 github.com/containers/ocicrypt
 github.com/containers/ocicrypt/blockcipher
