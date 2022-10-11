@@ -91,6 +91,11 @@ state = "${STATEDIR}"
 	returns = "application/vnd.oci.image.layer.v1.tar+gzip"
 	path = "${BIN}/ctd-decoder"
 
+    [stream_processors."io.containerd.ocicrypt.decoder.v1.tar.zstd"]
+	accepts = ["application/vnd.oci.image.layer.v1.tar+zstd+encrypted"]
+	returns = "application/vnd.oci.image.layer.v1.tar+zstd"
+	path = "${BIN}/ctd-decoder"
+
     [stream_processors."io.containerd.ocicrypt.decoder.v1.tar"]
 	accepts = ["application/vnd.oci.image.layer.v1.tar+encrypted"]
 	returns = "application/vnd.oci.image.layer.v1.tar"
@@ -127,6 +132,12 @@ state = "${STATEDIR}"
     [stream_processors."io.containerd.ocicrypt.decoder.v1.tar.gzip"]
 	accepts = ["application/vnd.oci.image.layer.v1.tar+gzip+encrypted"]
 	returns = "application/vnd.oci.image.layer.v1.tar+gzip"
+	path = "${BIN}/ctd-decoder"
+	args = ["--decryption-keys-path", "${LOCAL_KEYS_PATH}"]
+
+    [stream_processors."io.containerd.ocicrypt.decoder.v1.tar.zstd"]
+	accepts = ["application/vnd.oci.image.layer.v1.tar+zsdt+encrypted"]
+	returns = "application/vnd.oci.image.layer.v1.tar+zstd"
 	path = "${BIN}/ctd-decoder"
 	args = ["--decryption-keys-path", "${LOCAL_KEYS_PATH}"]
 
