@@ -1,5 +1,12 @@
 CHANGES
 
+v1.1.7:
+  - Added support for zstd-compressed layers
+  - Update to ocicrypt v1.1.6 for zstd-related dependencies
+  - Update to containerd v1.6.8
+  - Sync'ed ctr-enc with upstream ctr changes to import command
+  - Add support for --all-platforms to encrypt command of ctr-enc
+
 v1.1.6:
   - Update to ocicrypt v1.1.5 for yaml v3.0 dependency
   - Update to containerd v1.6.6 for runc v1.1.2 dependency
