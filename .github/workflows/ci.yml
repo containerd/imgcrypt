@@ -29,7 +29,7 @@ jobs:
           path: src/github.com/containerd/imgcrypt
           fetch-depth: 25
 
-      - uses: containerd/project-checks@v1
+      - uses: containerd/project-checks@v1.1.0
         with:
           working-directory: src/github.com/containerd/imgcrypt
 
