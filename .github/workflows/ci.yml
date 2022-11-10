@@ -10,11 +10,11 @@ jobs:
 
   checks:
     name: Project Checks
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
     timeout-minutes: 5
 
     steps:
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@v3
         with:
           go-version: 1.19
 
@@ -24,12 +24,12 @@ jobs:
           echo "GOPATH=${{ github.workspace }}" >> $GITHUB_ENV
           echo "${{ github.workspace }}/bin" >> $GITHUB_PATH
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           path: src/github.com/containerd/imgcrypt
           fetch-depth: 25
 
-      - uses: containerd/project-checks@v1
+      - uses: containerd/project-checks@v1.1.0
         with:
           working-directory: src/github.com/containerd/imgcrypt
 
@@ -40,10 +40,10 @@ jobs:
 
     strategy:
       matrix:
-        os: [ubuntu-18.04]
+        os: [ubuntu-22.04]
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           path: src/github.com/containerd/imgcrypt
 
@@ -62,7 +62,7 @@ jobs:
     strategy:
       matrix:
         go: [1.18, 1.19]
-        os: [ubuntu-18.04, windows-2019]
+        os: [ubuntu-22.04, windows-2022]
 
     name: Tests / ${{ matrix.os }} / ${{ matrix.go }}
     runs-on: ${{ matrix.os }}
@@ -70,16 +70,16 @@ jobs:
     needs: [linters, checks]
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           repository: containerd/containerd
           path: src/github.com/containerd/containerd
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           path: src/github.com/containerd/imgcrypt
 
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@v3
         with:
           go-version: ${{ matrix.go }}
 
@@ -99,8 +99,8 @@ jobs:
         shell: bash
         if: ${{ startsWith(matrix.os, 'ubuntu-') }}
         run: |
-          sudo apt update
-          sudo apt install gnutls-bin softhsm2 libseccomp-dev
+          sudo apt-get update
+          sudo apt-get install -y gnutls-bin softhsm2 libseccomp-dev libbtrfs-dev
           make binaries
           sudo make install
           sudo rm /usr/local/bin/ctr
