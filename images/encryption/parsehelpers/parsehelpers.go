@@ -21,7 +21,6 @@ package parsehelpers
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
@@ -69,7 +68,7 @@ func processRecipientKeys(recipients []string) ([][]byte, [][]byte, [][]byte, []
 			gpgRecipients = append(gpgRecipients, []byte(value))
 
 		case "jwe":
-			tmp, err := ioutil.ReadFile(value)
+			tmp, err := os.ReadFile(value)
 			if err != nil {
 				return nil, nil, nil, nil, nil, nil, fmt.Errorf("unable to read file: %w", err)
 			}
@@ -79,7 +78,7 @@ func processRecipientKeys(recipients []string) ([][]byte, [][]byte, [][]byte, []
 			pubkeys = append(pubkeys, tmp)
 
 		case "pkcs7":
-			tmp, err := ioutil.ReadFile(value)
+			tmp, err := os.ReadFile(value)
 			if err != nil {
 				return nil, nil, nil, nil, nil, nil, fmt.Errorf("unable to read file %s: %w", value, err)
 			}
@@ -89,7 +88,7 @@ func processRecipientKeys(recipients []string) ([][]byte, [][]byte, [][]byte, []
 			x509s = append(x509s, tmp)
 
 		case "pkcs11":
-			tmp, err := ioutil.ReadFile(value)
+			tmp, err := os.ReadFile(value)
 			if err != nil {
 				return nil, nil, nil, nil, nil, nil, fmt.Errorf("unable to read file %s: %w", value, err)
 			}
@@ -118,7 +117,7 @@ func processRecipientKeys(recipients []string) ([][]byte, [][]byte, [][]byte, []
 // - <password>
 func processPwdString(pwdString string) ([]byte, error) {
 	if strings.HasPrefix(pwdString, "file=") {
-		return ioutil.ReadFile(pwdString[5:])
+		return os.ReadFile(pwdString[5:])
 	} else if strings.HasPrefix(pwdString, "pass=") {
 		return []byte(pwdString[5:]), nil
 	} else if strings.HasPrefix(pwdString, "fd=") {
@@ -179,7 +178,7 @@ func processPrivateKeyFiles(keyFilesAndPwds []string) ([][]byte, [][]byte, [][]b
 		}
 
 		keyfile := parts[0]
-		tmp, err := ioutil.ReadFile(keyfile)
+		tmp, err := os.ReadFile(keyfile)
 		if err != nil {
 			return nil, nil, nil, nil, nil, nil, err
 		}

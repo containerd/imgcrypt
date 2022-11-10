@@ -19,7 +19,6 @@ package main
 import (
 	b64 "encoding/base64"
 	"errors"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -49,7 +48,7 @@ func getDecryptionKeys(keysPath string) (encconfig.CryptoConfig, error) {
 			return errors.New("Symbolic links not supported in decryption keys paths")
 		}
 
-		privateKey, err := ioutil.ReadFile(path)
+		privateKey, err := os.ReadFile(path)
 		if err != nil {
 			return err
 		}
