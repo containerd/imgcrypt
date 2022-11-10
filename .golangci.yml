@@ -1,5 +1,6 @@
 linters:
   enable:
+    - depguard
     - structcheck
     - varcheck
     - staticcheck
@@ -18,3 +19,12 @@ run:
     - cmd/ctr/commands/images
     - cmd\\ctr\\commands\\run
     - cmd\\ctr\\commands\\images
+
+linters-settings:
+  depguard:
+    list-type: denylist
+    include-go-root: true
+    packages:
+      # use "io" or "os" instead
+      # https://go.dev/doc/go1.16#ioutil
+      - io/ioutil

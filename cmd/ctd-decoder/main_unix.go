@@ -20,7 +20,7 @@
 package main
 
 import (
-	"io/ioutil"
+	"io"
 	"os"
 )
 
@@ -29,5 +29,5 @@ const payloadFD = 3
 func readPayload() ([]byte, error) {
 	f := os.NewFile(payloadFD, "configFd")
 	defer f.Close()
-	return ioutil.ReadAll(f)
+	return io.ReadAll(f)
 }
