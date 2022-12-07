@@ -3,10 +3,10 @@ module github.com/containerd/imgcrypt
 go 1.16
 
 require (
-	github.com/Microsoft/go-winio v0.5.1
-	github.com/Microsoft/hcsshim v0.9.4
+	github.com/Microsoft/go-winio v0.5.2
+	github.com/Microsoft/hcsshim v0.9.5
 	github.com/containerd/console v1.0.3
-	github.com/containerd/containerd v1.6.8
+	github.com/containerd/containerd v1.6.12
 	github.com/containerd/go-cni v1.1.6
 	github.com/containerd/typeurl v1.0.2
 	github.com/containers/ocicrypt v1.1.6
@@ -17,5 +17,5 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/urfave/cli v1.22.2
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	google.golang.org/grpc v1.43.0
+	google.golang.org/grpc v1.47.0
 )
