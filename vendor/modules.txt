@@ -5,7 +5,7 @@ github.com/Microsoft/go-winio/backuptar
 github.com/Microsoft/go-winio/pkg/guid
 github.com/Microsoft/go-winio/pkg/security
 github.com/Microsoft/go-winio/vhd
-# github.com/Microsoft/hcsshim v0.9.5
+# github.com/Microsoft/hcsshim v0.9.6
 ## explicit
 github.com/Microsoft/hcsshim
 github.com/Microsoft/hcsshim/cmd/containerd-shim-runhcs-v1/options
@@ -39,7 +39,7 @@ github.com/cilium/ebpf/internal
 github.com/cilium/ebpf/internal/btf
 github.com/cilium/ebpf/internal/unix
 github.com/cilium/ebpf/link
-# github.com/containerd/cgroups v1.0.3
+# github.com/containerd/cgroups v1.0.4
 github.com/containerd/cgroups
 github.com/containerd/cgroups/stats/v1
 github.com/containerd/cgroups/v2
@@ -47,7 +47,7 @@ github.com/containerd/cgroups/v2/stats
 # github.com/containerd/console v1.0.3
 ## explicit
 github.com/containerd/console
-# github.com/containerd/containerd v1.6.12
+# github.com/containerd/containerd v1.6.18
 ## explicit
 github.com/containerd/containerd
 github.com/containerd/containerd/api/events
@@ -242,7 +242,7 @@ github.com/opencontainers/selinux/go-selinux
 github.com/opencontainers/selinux/go-selinux/label
 github.com/opencontainers/selinux/pkg/pwalk
 github.com/opencontainers/selinux/pkg/pwalkdir
-# github.com/pelletier/go-toml v1.9.3
+# github.com/pelletier/go-toml v1.9.5
 github.com/pelletier/go-toml
 # github.com/pkg/errors v0.9.1
 github.com/pkg/errors
