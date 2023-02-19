@@ -307,7 +307,7 @@ golang.org/x/crypto/openpgp/errors
 golang.org/x/crypto/openpgp/packet
 golang.org/x/crypto/openpgp/s2k
 golang.org/x/crypto/pbkdf2
-# golang.org/x/net v0.0.0-20220722155237-a158d28d115b
+# golang.org/x/net v0.7.0
 ## explicit; go 1.17
 golang.org/x/net/context/ctxhttp
 golang.org/x/net/http/httpguts
@@ -320,17 +320,17 @@ golang.org/x/net/trace
 ## explicit
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f
+# golang.org/x/sys v0.5.0
 ## explicit; go 1.17
 golang.org/x/sys/execabs
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/plan9
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
+# golang.org/x/term v0.5.0
 ## explicit; go 1.17
 golang.org/x/term
-# golang.org/x/text v0.3.7
+# golang.org/x/text v0.7.0
 ## explicit; go 1.17
 golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
