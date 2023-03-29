@@ -77,6 +77,7 @@ setup() {
 
 startContainerd() {
 	cat <<_EOF_ >${CONFIG_TOML}
+version = 2
 disable_plugins = ["cri"]
 root = "${ROOTDIR}"
 state = "${STATEDIR}"
@@ -120,6 +121,7 @@ startContainerdLocalKeys() {
 	LOCAL_KEYS_PATH="${WORKDIR}/keys"
 	mkdir -p ${LOCAL_KEYS_PATH}
 	cat <<_EOF_ >${CONFIG_TOML}
+version = 2
 disable_plugins = ["cri"]
 root = "${ROOTDIR}"
 state = "${STATEDIR}"
