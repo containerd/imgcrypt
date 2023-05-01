@@ -99,17 +99,17 @@ func getPayload() (*imgcrypt.Payload, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read payload: %w", err)
 	}
-	var any types.Any
-	if err := proto.Unmarshal(data, &any); err != nil {
+	var anything types.Any
+	if err := proto.Unmarshal(data, &anything); err != nil {
 		return nil, fmt.Errorf("could not proto.Unmarshal() decrypt data: %w", err)
 	}
-	v, err := typeurl.UnmarshalAny(&any)
+	v, err := typeurl.UnmarshalAny(&anything)
 	if err != nil {
 		return nil, fmt.Errorf("could not UnmarshalAny() the decrypt data: %w", err)
 	}
 	l, ok := v.(*imgcrypt.Payload)
 	if !ok {
-		return nil, fmt.Errorf("unknown payload type %s", any.TypeUrl)
+		return nil, fmt.Errorf("unknown payload type %s", anything.TypeUrl)
 	}
 	return l, nil
 }
