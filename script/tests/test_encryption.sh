@@ -638,6 +638,9 @@ testJWE() {
 
 	MSG=$($CTR container rm testcontainer1 2>&1)
 	MSG=$($CTR snapshot rm testcontainer1 2>&1)
+
+	# Create testcontainer1 from encrypted bash image ${BASH_ENC}
+	# Creating the container without providing (right) key must fail
 	MSG=$(sudo $CTR container create ${BASH_ENC} testcontainer1 2>&1)
 	if [ $? -eq 0 ]; then
 		MSG=$($CTR container rm testcontainer1 2>&1)
@@ -645,6 +648,8 @@ testJWE() {
 		failExit 1 "Should not have been able to create a container from encrypted image without passing keys"
 	fi
 	MSG=$($CTR snapshot rm testcontainer1 2>&1)
+
+	# creating the container when providing right key must work
 	MSG=$(sudo bash -c "$CTR container create \
 		--key ${PRIVKEYJWK} \
 		${BASH_ENC} testcontainer1 2>&1")
@@ -652,6 +657,7 @@ testJWE() {
 	MSG=$($CTR container rm testcontainer1 2>&1)
 	MSG=$($CTR snapshot rm testcontainer1 2>&1)
 
+	# running the container without providing (right) key must fail
 	MSG=$(sudo bash -c "$CTR run \
 		--rm \
 		${BASH_ENC} testcontainer1 echo 'Hello world'" 2>&1)
@@ -660,6 +666,8 @@ testJWE() {
 		failExit 1 "Should not have been able to run a container from encrypted image without passing keys"
 	fi
 	MSG=$($CTR snapshot rm testcontainer1 2>&1)
+
+	# Running the container when providing right key must work
 	MSG=$(sudo bash -c "$CTR run \
 		--key ${PRIVKEYJWK} \
 		--rm \
