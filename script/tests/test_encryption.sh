@@ -676,6 +676,9 @@ testLocalKeys() {
 	createJWEKeys
 	setupPKCS11
 
+	# Env. variable needed for encryption with SOFTHSM_KEY_PEM
+	export OCICRYPT_OAEP_HASHALG=sha1
+
 	echo "Testing JWE and PKCS11 type of encryption with local unpack keys"
 
 	# Remove original images
