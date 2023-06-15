@@ -702,8 +702,8 @@ testLocalKeys() {
 
 	echo "Testing JWE and PKCS11 type of encryption with local unpack keys"
 
-	# Remove original images
-	$CTR images rm --sync ${ALPINE_ENC} ${ALPINE_DEC} ${NGINX_ENC} ${NGINX_DEC} &>/dev/null
+	# Remove existing images
+	$CTR images rm --sync ${ALPINE_ENC} ${ALPINE_DEC} ${NGINX_ENC} ${NGINX_DEC} ${BASH_ENC} &>/dev/null
 
 	local recipient1=jwe:${PUBKEYPEM}
 	local recipient2=pkcs11:${SOFTHSM_KEY}
@@ -773,6 +773,65 @@ testLocalKeys() {
 
 	echo "PASS: JWE and PKCS11 type of encryption with local unpack keys"
 	echo
+
+	rm -f ${LOCAL_KEYS_PATH}/*
+
+	echo "Testing creation of container from encrypted image with local key (JWK)"
+
+	recipient=jwe:${PUBKEYJWK}
+	$CTR images encrypt \
+		--recipient ${recipient} \
+		${BASH} ${BASH_ENC}
+	failExit $? "Image encryption with JWE failed; public key: ${recipient}"
+
+	MSG=$($CTR container rm testcontainer1 2>&1)
+	MSG=$($CTR snapshot rm testcontainer1 2>&1)
+
+	# Create testcontainer1 from encrypted bash image ${BASH_ENC}
+	# Creating the container without providing (right) key must fail
+	MSG=$(sudo $CTR container create ${BASH_ENC} testcontainer1 2>&1)
+	if [ $? -eq 0 ]; then
+		MSG=$($CTR container rm testcontainer1 2>&1)
+		MSG=$($CTR snapshot rm testcontainer1 2>&1)
+		failExit 1 "Should not have been able to create a container from encrypted image when JWK key file is not available"
+	fi
+	MSG=$($CTR snapshot rm testcontainer1 2>&1)
+
+	# creating the container when providing right key must work
+	cp ${PRIVKEYJWK} ${LOCAL_KEYS_PATH}/.
+	MSG=$(sudo bash -c "$CTR container create --skip-decrypt-auth ${BASH_ENC} testcontainer1 2>&1")
+	failExit $? "Should have been able to create a container from encrypted image when JWK key file is available\n${MSG}"
+	MSG=$($CTR container rm testcontainer1 2>&1)
+	MSG=$($CTR snapshot rm testcontainer1 2>&1)
+
+	# Running the container without providing (right) key must fail.
+	# If we were not to pass --skip-decrypt-auth then this test would fail since then
+	# authorization will fail since no keys are provided via command line that ctr-enc
+	# could do authorization with (on client side!). To make running the image fail we
+	# don't pass --skip-decrypt-auth.
+	rm -f ${LOCAL_KEYS_PATH}/*
+	MSG=$(sudo bash -c "$CTR run \
+		--rm \
+		${BASH_ENC} testcontainer1 echo 'Hello world'" 2>&1)
+	if [ $? -eq 0 ]; then
+		MSG=$($CTR snapshot rm testcontainer1 2>&1)
+		failExit 1 "Should not have been able to run a container from encrypted image when JWK key file is not available"
+	fi
+	MSG=$($CTR snapshot rm testcontainer1 2>&1)
+
+	# Running the container when providing right key must work
+	# This only works if --skip-decrypt-auth is passed since no keys are provided
+	# on the command line and ctr-enc would otherwise do authorization
+	cp ${PRIVKEYJWK} ${LOCAL_KEYS_PATH}/.
+	MSG=$(sudo bash -c "$CTR run \
+		--rm \
+		--skip-decrypt-auth \
+		${BASH_ENC} testcontainer1 echo 'Hello world'" 2>&1)
+	failExit $? "Should have been able to run a container from encrypted image when JWK key file is available\n${MSG}"
+
+	$CTR images rm --sync ${BASH_ENC} &>/dev/null
+
+	echo "PASS: Creation of container from encrypted image with local JWK key"
 }
 
 setupPKCS7() {
