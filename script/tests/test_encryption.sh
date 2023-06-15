@@ -651,6 +651,9 @@ testJWE() {
 
 	MSG=$($CTR container rm testcontainer1 2>&1)
 	MSG=$($CTR snapshot rm testcontainer1 2>&1)
+
+	# Create testcontainer1 from encrypted bash image ${BASH_ENC}
+	# Creating the container without providing (right) key must fail
 	MSG=$(sudo $CTR container create ${BASH_ENC} testcontainer1 2>&1)
 	if [ $? -eq 0 ]; then
 		MSG=$($CTR container rm testcontainer1 2>&1)
@@ -658,6 +661,8 @@ testJWE() {
 		failExit 1 "Should not have been able to create a container from encrypted image without passing keys"
 	fi
 	MSG=$($CTR snapshot rm testcontainer1 2>&1)
+
+	# creating the container when providing right key must work
 	MSG=$(sudo bash -c "$CTR container create \
 		--key ${PRIVKEYJWK} \
 		${BASH_ENC} testcontainer1 2>&1")
@@ -665,6 +670,7 @@ testJWE() {
 	MSG=$($CTR container rm testcontainer1 2>&1)
 	MSG=$($CTR snapshot rm testcontainer1 2>&1)
 
+	# running the container without providing (right) key must fail
 	MSG=$(sudo bash -c "$CTR run \
 		--rm \
 		${BASH_ENC} testcontainer1 echo 'Hello world'" 2>&1)
@@ -673,6 +679,8 @@ testJWE() {
 		failExit 1 "Should not have been able to run a container from encrypted image without passing keys"
 	fi
 	MSG=$($CTR snapshot rm testcontainer1 2>&1)
+
+	# Running the container when providing right key must work
 	MSG=$(sudo bash -c "$CTR run \
 		--key ${PRIVKEYJWK} \
 		--rm \
@@ -688,6 +696,9 @@ testJWE() {
 testLocalKeys() {
 	createJWEKeys
 	setupPKCS11
+
+	# Env. variable needed for encryption with SOFTHSM_KEY_PEM
+	export OCICRYPT_OAEP_HASHALG=sha1
 
 	echo "Testing JWE and PKCS11 type of encryption with local unpack keys"
 
@@ -735,7 +746,7 @@ testLocalKeys() {
 	echo "Testing creation of container from encrypted image with local keys (JWE)"
 	MSG=$($CTR container rm testcontainer1 2>&1)
 	MSG=$($CTR snapshot rm testcontainer1 2>&1)
-	MSG=$(sudo $CTR container create ${ALPINE_ENC} --skip-decrypt-auth --key ${PRIVKEY2PEM} testcontainer1 2>&1)
+	MSG=$(sudo $CTR container create --skip-decrypt-auth ${ALPINE_ENC} testcontainer1 2>&1)
 
 	failExit $? "Should have been able to create a container from encrypted image when local keys exists (JWE)\n${MSG}"
 	MSG=$($CTR container rm testcontainer1 2>&1)
@@ -751,7 +762,7 @@ testLocalKeys() {
 	echo "Testing creation of container from encrypted image with local keys (PKCS11)"
 	MSG=$($CTR container rm testcontainer1 2>&1)
 	MSG=$($CTR snapshot rm testcontainer1 2>&1)
-	MSG=$(sudo $CTR container create ${ALPINE_ENC} --skip-decrypt-auth --key ${PRIVKEY2PEM} testcontainer1 2>&1)
+	MSG=$(sudo $CTR container create --skip-decrypt-auth ${ALPINE_ENC} testcontainer1 2>&1)
 
 	failExit $? "Should have been able to create a container from encrypted image when local keys exists (PKCS11)\n${MSG}"
 	MSG=$($CTR container rm testcontainer1 2>&1)
