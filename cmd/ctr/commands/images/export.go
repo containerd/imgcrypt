@@ -25,7 +25,6 @@ import (
 	"github.com/containerd/containerd/cmd/ctr/commands"
 	"github.com/containerd/containerd/images/archive"
 	"github.com/containerd/containerd/platforms"
-
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/urfave/cli"
 )
@@ -81,7 +80,7 @@ When '--all-platforms' is given all images in a manifest list must be available.
 			}
 			exportOpts = append(exportOpts, archive.WithPlatform(platforms.Ordered(all...)))
 		} else {
-			exportOpts = append(exportOpts, archive.WithPlatform(platforms.Default()))
+			exportOpts = append(exportOpts, archive.WithPlatform(platforms.DefaultStrict()))
 		}
 
 		if context.Bool("all-platforms") {

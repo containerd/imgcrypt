@@ -30,12 +30,12 @@ import (
 	"github.com/containerd/containerd/cmd/ctr/commands"
 	"github.com/containerd/containerd/cmd/ctr/commands/tasks"
 	"github.com/containerd/containerd/containers"
+	clabels "github.com/containerd/containerd/labels"
 	"github.com/containerd/containerd/namespaces"
 	"github.com/containerd/containerd/oci"
 	gocni "github.com/containerd/go-cni"
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/flags"
-
-	"github.com/opencontainers/runtime-spec/specs-go"
+	specs "github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -65,8 +65,8 @@ func parseMountFlag(m string) (specs.Mount, error) {
 	}
 
 	for _, field := range fields {
-		v := strings.Split(field, "=")
-		if len(v) != 2 {
+		v := strings.SplitN(field, "=", 2)
+		if len(v) < 2 {
 			return mount, fmt.Errorf("invalid mount specification: expected key=val")
 		}
 
@@ -98,7 +98,7 @@ var Command = cli.Command{
 	Flags: append([]cli.Flag{
 		cli.BoolFlag{
 			Name:  "rm",
-			Usage: "remove the container after running",
+			Usage: "remove the container after running, cannot be used with --detach",
 		},
 		cli.BoolFlag{
 			Name:  "null-io",
@@ -110,7 +110,7 @@ var Command = cli.Command{
 		},
 		cli.BoolFlag{
 			Name:  "detach,d",
-			Usage: "detach from the task after it has started execution",
+			Usage: "detach from the task after it has started execution, cannot be used with --rm",
 		},
 		cli.StringFlag{
 			Name:  "fifo-dir",
@@ -124,13 +124,20 @@ var Command = cli.Command{
 			Name:  "platform",
 			Usage: "run image for specific platform",
 		},
-	}, append(platformRunFlags, append(commands.SnapshotterFlags, append(commands.ContainerFlags, flags.ImageDecryptionFlags...)...)...)...),
+		cli.BoolFlag{
+			Name:  "cni",
+			Usage: "enable cni networking for the container",
+		},
+	}, append(platformRunFlags,
+		append(append(append(commands.SnapshotterFlags, []cli.Flag{commands.SnapshotterLabels}...),
+			commands.ContainerFlags...),flags.ImageDecryptionFlags...)...)...),
 	Action: func(context *cli.Context) error {
 		var (
 			err error
 			id  string
 			ref string
 
+			rm        = context.Bool("rm")
 			tty       = context.Bool("tty")
 			detach    = context.Bool("detach")
 			config    = context.IsSet("config")
@@ -153,6 +160,10 @@ var Command = cli.Command{
 		if id == "" {
 			return errors.New("container id must be provided")
 		}
+		if rm && detach {
+			return errors.New("flags --detach and --rm cannot be specified together")
+		}
+
 		client, ctx, cancel, err := commands.NewClient(context)
 		if err != nil {
 			return err
@@ -162,7 +173,7 @@ var Command = cli.Command{
 		if err != nil {
 			return err
 		}
-		if context.Bool("rm") && !detach {
+		if rm && !detach {
 			defer container.Delete(ctx, containerd.WithSnapshotCleanup)
 		}
 		var con console.Console
@@ -208,7 +219,12 @@ var Command = cli.Command{
 			}
 		}
 		if enableCNI {
-			if _, err := network.Setup(ctx, fullID(ctx, container), fmt.Sprintf("/proc/%d/ns/net", task.Pid())); err != nil {
+			netNsPath, err := getNetNSPath(ctx, task)
+			if err != nil {
+				return err
+			}
+
+			if _, err := network.Setup(ctx, fullID(ctx, container), netNsPath); err != nil {
 				return err
 			}
 		}
@@ -248,4 +264,23 @@ func fullID(ctx context.Context, c containerd.Container) string {
 		return id
 	}
 	return fmt.Sprintf("%s-%s", ns, id)
+}
+
+// buildLabel builds the labels from command line labels and the image labels
+func buildLabels(cmdLabels, imageLabels map[string]string) map[string]string {
+	labels := make(map[string]string)
+	for k, v := range imageLabels {
+		if err := clabels.Validate(k, v); err == nil {
+			labels[k] = v
+		} else {
+			// In case the image label is invalid, we output a warning and skip adding it to the
+			// container.
+			logrus.WithError(err).Warnf("unable to add image label with key %s to the container", k)
+		}
+	}
+	// labels from the command line will override image and the initial image config labels
+	for k, v := range cmdLabels {
+		labels[k] = v
+	}
+	return labels
 }
