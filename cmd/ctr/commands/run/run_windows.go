@@ -19,12 +19,14 @@ package run
 import (
 	gocontext "context"
 	"errors"
+	"strings"
 
 	"github.com/Microsoft/hcsshim/cmd/containerd-shim-runhcs-v1/options"
 	"github.com/containerd/console"
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/oci"
 	"github.com/containerd/containerd/pkg/netns"
+	"github.com/containerd/containerd/snapshots"
 	"github.com/containerd/imgcrypt"
 	"github.com/containerd/imgcrypt/cmd/ctr/commands"
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/images"
@@ -39,7 +41,7 @@ import (
 var platformRunFlags = []cli.Flag{
 	cli.BoolFlag{
 		Name:  "isolated",
-		Usage: "run the container with vm isolation",
+		Usage: "Run the container with vm isolation",
 	},
 }
 
@@ -109,7 +111,10 @@ func NewContainer(ctx gocontext.Context, client *containerd.Client, context *cli
 			containerd.WithImage(image),
 			containerd.WithImageConfigLabels(image),
 			containerd.WithSnapshotter(snapshotter),
-			containerd.WithNewSnapshot(id, image),
+			containerd.WithNewSnapshot(
+				id,
+				image,
+				snapshots.WithLabels(commands.LabelArgs(context.StringSlice("snapshotter-label")))),
 			containerd.WithAdditionalContainerLabels(labels))
 
 		if len(args) > 0 {
@@ -117,6 +122,9 @@ func NewContainer(ctx gocontext.Context, client *containerd.Client, context *cli
 		}
 		if cwd := context.String("cwd"); cwd != "" {
 			opts = append(opts, oci.WithProcessCwd(cwd))
+		}
+		if user := context.String("user"); user != "" {
+			opts = append(opts, oci.WithUser(user))
 		}
 		if context.Bool("tty") {
 			opts = append(opts, oci.WithTTY)
@@ -137,6 +145,8 @@ func NewContainer(ctx gocontext.Context, client *containerd.Client, context *cli
 				return nil, err
 			}
 			opts = append(opts, oci.WithWindowsNetworkNamespace(ns.GetPath()))
+			cniMeta := &commands.NetworkMetaData{EnableCni: true}
+			cOpts = append(cOpts, containerd.WithContainerExtension(commands.CtrCniMetadataExtension, cniMeta))
 		}
 		if context.Bool("isolated") {
 			opts = append(opts, oci.WithWindowsHyperV)
@@ -148,6 +158,24 @@ func NewContainer(ctx gocontext.Context, client *containerd.Client, context *cli
 		ccount := context.Uint64("cpu-count")
 		if ccount != 0 {
 			opts = append(opts, oci.WithWindowsCPUCount(ccount))
+		}
+		cshares := context.Uint64("cpu-shares")
+		if cshares != 0 {
+			opts = append(opts, oci.WithWindowsCPUShares(uint16(cshares)))
+		}
+		cmax := context.Uint64("cpu-max")
+		if cmax != 0 {
+			opts = append(opts, oci.WithWindowsCPUMaximum(uint16(cmax)))
+		}
+		for _, dev := range context.StringSlice("device") {
+			idType, devID, ok := strings.Cut(dev, "://")
+			if !ok {
+				return nil, errors.New("devices must be in the format IDType://ID")
+			}
+			if idType == "" {
+				return nil, errors.New("devices must have a non-empty IDType")
+			}
+			opts = append(opts, oci.WithWindowsDevice(idType, devID))
 		}
 	}
 
@@ -174,10 +202,6 @@ func NewContainer(ctx gocontext.Context, client *containerd.Client, context *cli
 	}
 
 	return client.NewContainer(ctx, id, cOpts...)
-}
-
-func getNewTaskOpts(_ *cli.Context) []containerd.NewTaskOpts {
-	return nil
 }
 
 func getNetNSPath(ctx gocontext.Context, t containerd.Task) (string, error) {

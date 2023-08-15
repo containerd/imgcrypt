@@ -130,6 +130,7 @@ github.com/containerd/containerd/identifiers
 github.com/containerd/containerd/images
 github.com/containerd/containerd/images/archive
 github.com/containerd/containerd/images/converter
+github.com/containerd/containerd/images/converter/uncompress
 github.com/containerd/containerd/labels
 github.com/containerd/containerd/leases
 github.com/containerd/containerd/leases/proxy
@@ -152,6 +153,8 @@ github.com/containerd/containerd/pkg/seed
 github.com/containerd/containerd/pkg/shutdown
 github.com/containerd/containerd/pkg/streaming
 github.com/containerd/containerd/pkg/transfer
+github.com/containerd/containerd/pkg/transfer/archive
+github.com/containerd/containerd/pkg/transfer/image
 github.com/containerd/containerd/pkg/transfer/plugins
 github.com/containerd/containerd/pkg/transfer/proxy
 github.com/containerd/containerd/pkg/transfer/registry
@@ -300,6 +303,18 @@ github.com/google/go-cmp/cmp/internal/value
 # github.com/google/uuid v1.3.0
 ## explicit
 github.com/google/uuid
+# github.com/hashicorp/errwrap v1.1.0
+## explicit
+github.com/hashicorp/errwrap
+# github.com/hashicorp/go-multierror v1.1.1
+## explicit; go 1.13
+github.com/hashicorp/go-multierror
+# github.com/intel/goresctrl v0.3.0
+## explicit; go 1.18
+github.com/intel/goresctrl/pkg/blockio
+github.com/intel/goresctrl/pkg/cgroups
+github.com/intel/goresctrl/pkg/kubernetes
+github.com/intel/goresctrl/pkg/log
 # github.com/klauspost/compress v1.16.0
 ## explicit; go 1.18
 github.com/klauspost/compress
@@ -549,6 +564,18 @@ google.golang.org/protobuf/types/known/durationpb
 google.golang.org/protobuf/types/known/emptypb
 google.golang.org/protobuf/types/known/fieldmaskpb
 google.golang.org/protobuf/types/known/timestamppb
+# gopkg.in/inf.v0 v0.9.1
+## explicit
+gopkg.in/inf.v0
+# gopkg.in/yaml.v2 v2.4.0
+## explicit; go 1.15
+gopkg.in/yaml.v2
 # gopkg.in/yaml.v3 v3.0.1
 ## explicit
 gopkg.in/yaml.v3
+# k8s.io/apimachinery v0.26.2
+## explicit; go 1.19
+k8s.io/apimachinery/pkg/api/resource
+# sigs.k8s.io/yaml v1.3.0
+## explicit; go 1.12
+sigs.k8s.io/yaml

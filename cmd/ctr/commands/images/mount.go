@@ -32,7 +32,7 @@ import (
 
 var mountCommand = cli.Command{
 	Name:      "mount",
-	Usage:     "mount an image to a target path",
+	Usage:     "Mount an image to a target path",
 	ArgsUsage: "[flags] <ref> <target>",
 	Description: `Mount an image rootfs to a specified path.
 
@@ -67,7 +67,7 @@ When you are done, use the unmount command.
 		}
 		defer cancel()
 
-		snapshotter := context.GlobalString("snapshotter")
+		snapshotter := context.String("snapshotter")
 		if snapshotter == "" {
 			snapshotter = containerd.DefaultSnapshotter
 		}
