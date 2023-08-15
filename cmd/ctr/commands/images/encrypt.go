@@ -22,6 +22,7 @@ import (
 
 	"github.com/containerd/containerd/cmd/ctr/commands"
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/flags"
+	"github.com/containerd/imgcrypt/cmd/ctr/commands/img"
 	"github.com/containerd/imgcrypt/images/encryption/parsehelpers"
 
 	"github.com/urfave/cli"
@@ -85,7 +86,7 @@ var encryptCommand = cli.Command{
 			return errors.New("no recipients given -- nothing to do")
 		}
 
-		layers32 := commands.IntToInt32Array(context.IntSlice("layer"))
+		layers32 := img.IntToInt32Array(context.IntSlice("layer"))
 
 		_, descs, err := getImageLayerInfos(client, ctx, local, layers32, context.StringSlice("platform"))
 		if err != nil {

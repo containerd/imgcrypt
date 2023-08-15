@@ -79,3 +79,13 @@ func GetImageLayerDescriptors(ctx context.Context, cs content.Store, desc ocispe
 	}
 	return lis, nil
 }
+
+// IntToInt32Array converts an array of int's to int32's
+func IntToInt32Array(in []int) []int32 {
+	var ret []int32
+
+	for _, v := range in {
+		ret = append(ret, int32(v))
+	}
+	return ret
+}
