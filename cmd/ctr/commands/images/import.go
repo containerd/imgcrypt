@@ -97,9 +97,9 @@ decrypting the image later on.
 
 	Action: func(context *cli.Context) error {
 		var (
-			in             = context.Args().First()
-			opts           []containerd.ImportOpt
-			platformMacher platforms.MatchComparer
+			in              = context.Args().First()
+			opts            []containerd.ImportOpt
+			platformMatcher platforms.MatchComparer
 		)
 
 		prefix := context.String("base-name")
@@ -134,8 +134,8 @@ decrypting the image later on.
 			if err != nil {
 				return err
 			}
-			platformMacher = platforms.Only(platSpec)
-			opts = append(opts, containerd.WithImportPlatform(platformMacher))
+			platformMatcher = platforms.OnlyStrict(platSpec)
+			opts = append(opts, containerd.WithImportPlatform(platformMatcher))
 		}
 
 		opts = append(opts, containerd.WithAllPlatforms(context.Bool("all-platforms")))
@@ -177,10 +177,10 @@ decrypting the image later on.
 			log.G(ctx).Debugf("unpacking %d images", len(imgs))
 
 			for _, img := range imgs {
-				if platformMacher == nil { // if platform not specified use default.
-					platformMacher = platforms.Default()
+				if platformMatcher == nil { // if platform not specified use default.
+					platformMatcher = platforms.Default()
 				}
-				image := containerd.NewImageWithPlatform(client, img, platformMacher)
+				image := containerd.NewImageWithPlatform(client, img, platformMatcher)
 
 				// TODO: Show unpack status
 				fmt.Printf("unpacking %s (%s)...", img.Name, img.Target.Digest)

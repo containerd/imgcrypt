@@ -32,7 +32,6 @@ import (
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/flags"
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/run"
 	"github.com/containerd/typeurl"
-
 	"github.com/urfave/cli"
 )
 
@@ -150,7 +149,7 @@ var deleteCommand = cli.Command{
 	Name:      "delete",
 	Usage:     "delete one or more existing containers",
 	ArgsUsage: "[flags] CONTAINER [CONTAINER, ...]",
-	Aliases:   []string{"del", "rm"},
+	Aliases:   []string{"del", "remove", "rm"},
 	Flags: []cli.Flag{
 		cli.BoolFlag{
 			Name:  "keep-snapshot",
@@ -282,7 +281,7 @@ var infoCommand = cli.Command{
 			return nil
 		}
 
-		if info.Spec != nil && info.Spec.GetValue() != nil {
+		if info.Spec != nil && info.Spec.Value != nil {
 			v, err := typeurl.UnmarshalAny(info.Spec)
 			if err != nil {
 				return err

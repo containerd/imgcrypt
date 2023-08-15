@@ -23,7 +23,6 @@ import (
 	"github.com/containerd/containerd/cio"
 	"github.com/containerd/containerd/cmd/ctr/commands"
 	"github.com/containerd/containerd/errdefs"
-
 	"github.com/urfave/cli"
 )
 

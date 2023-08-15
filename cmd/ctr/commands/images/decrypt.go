@@ -22,6 +22,7 @@ import (
 
 	"github.com/containerd/containerd/cmd/ctr/commands"
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/flags"
+	"github.com/containerd/imgcrypt/cmd/ctr/commands/img"
 	imgenc "github.com/containerd/imgcrypt/images/encryption"
 	"github.com/containerd/imgcrypt/images/encryption/parsehelpers"
 
@@ -72,7 +73,7 @@ var decryptCommand = cli.Command{
 		}
 		defer cancel()
 
-		layers32 := commands.IntToInt32Array(context.IntSlice("layer"))
+		layers32 := img.IntToInt32Array(context.IntSlice("layer"))
 
 		_, descs, err := getImageLayerInfos(client, ctx, local, layers32, context.StringSlice("platform"))
 		if err != nil {

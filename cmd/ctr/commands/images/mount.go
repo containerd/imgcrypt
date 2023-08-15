@@ -26,7 +26,6 @@ import (
 	"github.com/containerd/containerd/leases"
 	"github.com/containerd/containerd/mount"
 	"github.com/containerd/containerd/platforms"
-
 	"github.com/opencontainers/image-spec/identity"
 	"github.com/urfave/cli"
 )
