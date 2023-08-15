@@ -17,6 +17,9 @@ run:
     - cmd/ctr/commands/images
     - cmd\\ctr\\commands\\run
     - cmd\\ctr\\commands\\images
+  skip-files:
+    - cmd/ctr/commands/commands.go
+    - cmd\\ctr\\commands\\commands.go
 
 linters-settings:
   depguard:

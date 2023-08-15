@@ -130,7 +130,7 @@ var Command = cli.Command{
 		},
 	}, append(platformRunFlags,
 		append(append(append(commands.SnapshotterFlags, []cli.Flag{commands.SnapshotterLabels}...),
-			commands.ContainerFlags...),flags.ImageDecryptionFlags...)...)...),
+			commands.ContainerFlags...), flags.ImageDecryptionFlags...)...)...),
 	Action: func(context *cli.Context) error {
 		var (
 			err error
