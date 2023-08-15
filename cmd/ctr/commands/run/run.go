@@ -17,7 +17,6 @@
 package run
 
 import (
-	"context"
 	gocontext "context"
 	"encoding/csv"
 	"errors"
@@ -31,7 +30,6 @@ import (
 	"github.com/containerd/containerd/cmd/ctr/commands/tasks"
 	"github.com/containerd/containerd/containers"
 	clabels "github.com/containerd/containerd/labels"
-	"github.com/containerd/containerd/namespaces"
 	"github.com/containerd/containerd/oci"
 	gocni "github.com/containerd/go-cni"
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/flags"
@@ -65,13 +63,11 @@ func parseMountFlag(m string) (specs.Mount, error) {
 	}
 
 	for _, field := range fields {
-		v := strings.SplitN(field, "=", 2)
-		if len(v) < 2 {
+		key, val, ok := strings.Cut(field, "=")
+		if !ok {
 			return mount, fmt.Errorf("invalid mount specification: expected key=val")
 		}
 
-		key := v[0]
-		val := v[1]
 		switch key {
 		case "type":
 			mount.Type = val
@@ -92,41 +88,41 @@ func parseMountFlag(m string) (specs.Mount, error) {
 // Command runs a container
 var Command = cli.Command{
 	Name:           "run",
-	Usage:          "run a container",
+	Usage:          "Run a container",
 	ArgsUsage:      "[flags] Image|RootFS ID [COMMAND] [ARG...]",
 	SkipArgReorder: true,
 	Flags: append([]cli.Flag{
 		cli.BoolFlag{
 			Name:  "rm",
-			Usage: "remove the container after running, cannot be used with --detach",
+			Usage: "Remove the container after running, cannot be used with --detach",
 		},
 		cli.BoolFlag{
 			Name:  "null-io",
-			Usage: "send all IO to /dev/null",
+			Usage: "Send all IO to /dev/null",
 		},
 		cli.StringFlag{
 			Name:  "log-uri",
-			Usage: "log uri",
+			Usage: "Log uri",
 		},
 		cli.BoolFlag{
 			Name:  "detach,d",
-			Usage: "detach from the task after it has started execution, cannot be used with --rm",
+			Usage: "Detach from the task after it has started execution, cannot be used with --rm",
 		},
 		cli.StringFlag{
 			Name:  "fifo-dir",
-			Usage: "directory used for storing IO FIFOs",
+			Usage: "Directory used for storing IO FIFOs",
 		},
 		cli.StringFlag{
 			Name:  "cgroup",
-			Usage: "cgroup path (To disable use of cgroup, set to \"\" explicitly)",
+			Usage: "Cgroup path (To disable use of cgroup, set to \"\" explicitly)",
 		},
 		cli.StringFlag{
 			Name:  "platform",
-			Usage: "run image for specific platform",
+			Usage: "Run image for specific platform",
 		},
 		cli.BoolFlag{
 			Name:  "cni",
-			Usage: "enable cni networking for the container",
+			Usage: "Enable cni networking for the container",
 		},
 	}, append(platformRunFlags,
 		append(append(append(commands.SnapshotterFlags, []cli.Flag{commands.SnapshotterLabels}...),
@@ -191,7 +187,7 @@ var Command = cli.Command{
 			}
 		}
 
-		opts := getNewTaskOpts(context)
+		opts := tasks.GetNewTaskOpts(context)
 		ioOpts := []cio.Opt{cio.WithFIFODir(context.String("fifo-dir"))}
 		task, err := tasks.NewTask(ctx, client, container, context.String("checkpoint"), con, context.Bool("null-io"), context.String("log-uri"), ioOpts, opts...)
 		if err != nil {
@@ -202,7 +198,7 @@ var Command = cli.Command{
 		if !detach {
 			defer func() {
 				if enableCNI {
-					if err := network.Remove(ctx, fullID(ctx, container), ""); err != nil {
+					if err := network.Remove(ctx, commands.FullID(ctx, container), ""); err != nil {
 						logrus.WithError(err).Error("network review")
 					}
 				}
@@ -224,7 +220,7 @@ var Command = cli.Command{
 				return err
 			}
 
-			if _, err := network.Setup(ctx, fullID(ctx, container), netNsPath); err != nil {
+			if _, err := network.Setup(ctx, commands.FullID(ctx, container), netNsPath); err != nil {
 				return err
 			}
 		}
@@ -255,15 +251,6 @@ var Command = cli.Command{
 		}
 		return nil
 	},
-}
-
-func fullID(ctx context.Context, c containerd.Container) string {
-	id := c.ID()
-	ns, ok := namespaces.Namespace(ctx)
-	if !ok {
-		return id
-	}
-	return fmt.Sprintf("%s-%s", ns, id)
 }
 
 // buildLabel builds the labels from command line labels and the image labels

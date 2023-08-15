@@ -43,45 +43,49 @@ import (
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/images"
 	"github.com/containerd/imgcrypt/images/encryption"
 	"github.com/containerd/imgcrypt/images/encryption/parsehelpers"
+	"github.com/intel/goresctrl/pkg/blockio"
 
 	"github.com/opencontainers/runtime-spec/specs-go"
-	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
 
 var platformRunFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "runc-binary",
-		Usage: "specify runc-compatible binary",
+		Usage: "Specify runc-compatible binary",
 	},
 	cli.StringFlag{
 		Name:  "runc-root",
-		Usage: "specify runc-compatible root",
+		Usage: "Specify runc-compatible root",
 	},
 	cli.BoolFlag{
 		Name:  "runc-systemd-cgroup",
-		Usage: "start runc with systemd cgroup manager",
+		Usage: "Start runc with systemd cgroup manager",
 	},
 	cli.StringFlag{
 		Name:  "uidmap",
-		Usage: "run inside a user namespace with the specified UID mapping range; specified with the format `container-uid:host-uid:length`",
+		Usage: "Run inside a user namespace with the specified UID mapping range; specified with the format `container-uid:host-uid:length`",
 	},
 	cli.StringFlag{
 		Name:  "gidmap",
-		Usage: "run inside a user namespace with the specified GID mapping range; specified with the format `container-gid:host-gid:length`",
+		Usage: "Run inside a user namespace with the specified GID mapping range; specified with the format `container-gid:host-gid:length`",
 	},
 	cli.BoolFlag{
 		Name:  "remap-labels",
-		Usage: "provide the user namespace ID remapping to the snapshotter via label options; requires snapshotter support",
+		Usage: "Provide the user namespace ID remapping to the snapshotter via label options; requires snapshotter support",
+	},
+	cli.BoolFlag{
+		Name:  "privileged-without-host-devices",
+		Usage: "Don't pass all host devices to privileged container",
 	},
 	cli.Float64Flag{
 		Name:  "cpus",
-		Usage: "set the CFS cpu quota",
+		Usage: "Set the CFS cpu quota",
 		Value: 0.0,
 	},
 	cli.IntFlag{
 		Name:  "cpu-shares",
-		Usage: "set the cpu shares",
+		Usage: "Set the cpu shares",
 		Value: 1024,
 	},
 }
@@ -110,7 +114,7 @@ func NewContainer(ctx gocontext.Context, client *containerd.Client, context *cli
 	} else {
 		var (
 			ref = context.Args().First()
-			//for container's id is Args[1]
+			// for container's id is Args[1]
 			args = context.Args()[2:]
 		)
 		opts = append(opts, oci.WithDefaultSpec(), oci.WithDefaultUnixDevices)
@@ -209,12 +213,26 @@ func NewContainer(ctx gocontext.Context, client *containerd.Client, context *cli
 		if cwd := context.String("cwd"); cwd != "" {
 			opts = append(opts, oci.WithProcessCwd(cwd))
 		}
+		if user := context.String("user"); user != "" {
+			opts = append(opts, oci.WithUser(user), oci.WithAdditionalGIDs(user))
+		}
 		if context.Bool("tty") {
 			opts = append(opts, oci.WithTTY)
 		}
-		if context.Bool("privileged") {
-			opts = append(opts, oci.WithPrivileged, oci.WithAllDevicesAllowed, oci.WithHostDevices)
+
+		privileged := context.Bool("privileged")
+		privilegedWithoutHostDevices := context.Bool("privileged-without-host-devices")
+		if privilegedWithoutHostDevices && !privileged {
+			return nil, fmt.Errorf("can't use 'privileged-without-host-devices' without 'privileged' specified")
 		}
+		if privileged {
+			if privilegedWithoutHostDevices {
+				opts = append(opts, oci.WithPrivileged)
+			} else {
+				opts = append(opts, oci.WithPrivileged, oci.WithAllDevicesAllowed, oci.WithHostDevices)
+			}
+		}
+
 		if context.Bool("net-host") {
 			hostname, err := os.Hostname()
 			if err != nil {
@@ -235,6 +253,10 @@ func NewContainer(ctx gocontext.Context, client *containerd.Client, context *cli
 			opts = append(opts, oci.WithAnnotations(annos))
 		}
 
+		if context.Bool("cni") {
+			cniMeta := &commands.NetworkMetaData{EnableCni: true}
+			cOpts = append(cOpts, containerd.WithContainerExtension(commands.CtrCniMetadataExtension, cniMeta))
+		}
 		if caps := context.StringSlice("cap-add"); len(caps) > 0 {
 			for _, cap := range caps {
 				if !strings.HasPrefix(cap, "CAP_") {
@@ -301,16 +323,16 @@ func NewContainer(ctx gocontext.Context, client *containerd.Client, context *cli
 
 		joinNs := context.StringSlice("with-ns")
 		for _, ns := range joinNs {
-			parts := strings.Split(ns, ":")
-			if len(parts) != 2 {
+			nsType, nsPath, ok := strings.Cut(ns, ":")
+			if !ok {
 				return nil, errors.New("joining a Linux namespace using --with-ns requires the format 'nstype:path'")
 			}
-			if !validNamespace(parts[0]) {
-				return nil, errors.New("the Linux namespace type specified in --with-ns is not valid: " + parts[0])
+			if !validNamespace(nsType) {
+				return nil, errors.New("the Linux namespace type specified in --with-ns is not valid: " + nsType)
 			}
 			opts = append(opts, oci.WithLinuxNamespace(specs.LinuxNamespace{
-				Type: specs.LinuxNamespaceType(parts[0]),
-				Path: parts[1],
+				Type: specs.LinuxNamespaceType(nsType),
+				Path: nsPath,
 			}))
 		}
 		if context.IsSet("gpus") {
@@ -346,8 +368,24 @@ func NewContainer(ctx gocontext.Context, client *containerd.Client, context *cli
 			})
 		}
 
+		if c := context.String("blockio-config-file"); c != "" {
+			if err := blockio.SetConfigFromFile(c, false); err != nil {
+				return nil, fmt.Errorf("blockio-config-file error: %w", err)
+			}
+		}
+
+		if c := context.String("blockio-class"); c != "" {
+			if linuxBlockIO, err := blockio.OciLinuxBlockIO(c); err == nil {
+				opts = append(opts, oci.WithBlockIO(linuxBlockIO))
+			} else {
+				return nil, fmt.Errorf("blockio-class error: %w", err)
+			}
+		}
 		if c := context.String("rdt-class"); c != "" {
 			opts = append(opts, oci.WithRdt(c, "", ""))
+		}
+		if hostname := context.String("hostname"); hostname != "" {
+			opts = append(opts, oci.WithHostname(hostname))
 		}
 	}
 
@@ -416,32 +454,9 @@ func getRuntimeOptions(context *cli.Context) (interface{}, error) {
 	return nil, nil
 }
 
-func getNewTaskOpts(context *cli.Context) []containerd.NewTaskOpts {
-	var (
-		tOpts []containerd.NewTaskOpts
-	)
-	if context.Bool("no-pivot") {
-		tOpts = append(tOpts, containerd.WithNoPivotRoot)
-	}
-	if uidmap := context.String("uidmap"); uidmap != "" {
-		uidMap, err := parseIDMapping(uidmap)
-		if err != nil {
-			logrus.WithError(err).Warn("unable to parse uidmap; defaulting to uid 0 IO ownership")
-		}
-		tOpts = append(tOpts, containerd.WithUIDOwner(uidMap.HostID))
-	}
-	if gidmap := context.String("gidmap"); gidmap != "" {
-		gidMap, err := parseIDMapping(gidmap)
-		if err != nil {
-			logrus.WithError(err).Warn("unable to parse gidmap; defaulting to gid 0 IO ownership")
-		}
-		tOpts = append(tOpts, containerd.WithGIDOwner(gidMap.HostID))
-	}
-	return tOpts
-}
-
 func parseIDMapping(mapping string) (specs.LinuxIDMapping, error) {
-	parts := strings.Split(mapping, ":")
+	// We expect 3 parts, but limit to 4 to allow detection of invalid values.
+	parts := strings.SplitN(mapping, ":", 4)
 	if len(parts) != 3 {
 		return specs.LinuxIDMapping{}, errors.New("user namespace mappings require the format `container-id:host-id:size`")
 	}

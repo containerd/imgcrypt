@@ -1,5 +1,4 @@
 //go:build !windows
-// +build !windows
 
 /*
    Copyright The containerd Authors.
@@ -34,11 +33,11 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func init() {
-	startCommand.Flags = append(startCommand.Flags, cli.BoolFlag{
+var platformStartFlags = []cli.Flag{
+	cli.BoolFlag{
 		Name:  "no-pivot",
-		Usage: "disable use of pivot-root (linux only)",
-	})
+		Usage: "Disable use of pivot-root (linux only)",
+	},
 }
 
 // HandleConsoleResize resizes the console
@@ -80,6 +79,20 @@ func NewTask(ctx gocontext.Context, client *containerd.Client, container contain
 		}
 		opts = append(opts, containerd.WithTaskCheckpoint(im))
 	}
+
+	spec, err := container.Spec(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if spec.Linux != nil {
+		if len(spec.Linux.UIDMappings) != 0 {
+			opts = append(opts, containerd.WithUIDOwner(spec.Linux.UIDMappings[0].HostID))
+		}
+		if len(spec.Linux.GIDMappings) != 0 {
+			opts = append(opts, containerd.WithGIDOwner(spec.Linux.GIDMappings[0].HostID))
+		}
+	}
+
 	var ioCreator cio.Creator
 	if con != nil {
 		if nullIO {
@@ -107,7 +120,8 @@ func NewTask(ctx gocontext.Context, client *containerd.Client, container contain
 	return t, nil
 }
 
-func getNewTaskOpts(context *cli.Context) []containerd.NewTaskOpts {
+// GetNewTaskOpts resolves containerd.NewTaskOpts from cli.Context
+func GetNewTaskOpts(context *cli.Context) []containerd.NewTaskOpts {
 	if context.Bool("no-pivot") {
 		return []containerd.NewTaskOpts{containerd.WithNoPivotRoot}
 	}

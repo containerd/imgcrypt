@@ -32,6 +32,7 @@ import (
 
 	"github.com/containerd/console"
 	"github.com/containerd/containerd/log"
+	"github.com/containerd/containerd/pkg/transfer/registry"
 	"github.com/containerd/containerd/remotes"
 	"github.com/containerd/containerd/remotes/docker"
 	"github.com/containerd/containerd/remotes/docker/config"
@@ -159,7 +160,7 @@ type DebugTransport struct {
 
 // RoundTrip dumps request/responses and executes the request using the underlying transport.
 func (t DebugTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	in, err := httputil.DumpRequest(req, true)
+	in, err := httputil.DumpRequestOut(req, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to dump request: %w", err)
 	}
@@ -200,7 +201,59 @@ func NewDebugClientTrace(ctx gocontext.Context) *httptrace.ClientTrace {
 			}
 		},
 		GotConn: func(connInfo httptrace.GotConnInfo) {
-			log.G(ctx).WithField("reused", connInfo.Reused).WithField("remote_addr", connInfo.Conn.RemoteAddr().String()).Debugf("Connection successful")
+			remoteAddr := "<nil>"
+			if addr := connInfo.Conn.RemoteAddr(); addr != nil {
+				remoteAddr = addr.String()
+			}
+
+			log.G(ctx).WithField("reused", connInfo.Reused).WithField("remote_addr", remoteAddr).Debugf("Connection successful")
 		},
 	}
+}
+
+type staticCredentials struct {
+	ref      string
+	username string
+	secret   string
+}
+
+// NewStaticCredentials gets credentials from passing in cli context
+func NewStaticCredentials(ctx gocontext.Context, clicontext *cli.Context, ref string) (registry.CredentialHelper, error) {
+	username := clicontext.String("user")
+	var secret string
+	if i := strings.IndexByte(username, ':'); i > 0 {
+		secret = username[i+1:]
+		username = username[0:i]
+	}
+	if username != "" {
+		if secret == "" {
+			fmt.Printf("Password: ")
+
+			var err error
+			secret, err = passwordPrompt()
+			if err != nil {
+				return nil, err
+			}
+
+			fmt.Print("\n")
+		}
+	} else if rt := clicontext.String("refresh"); rt != "" {
+		secret = rt
+	}
+
+	return &staticCredentials{
+		ref:      ref,
+		username: username,
+		secret:   secret,
+	}, nil
+}
+
+func (sc *staticCredentials) GetCredentials(ctx gocontext.Context, ref, host string) (registry.Credentials, error) {
+	if ref == sc.ref {
+		return registry.Credentials{
+			Username: sc.username,
+			Secret:   sc.secret,
+		}, nil
+	}
+	return registry.Credentials{}, nil
 }

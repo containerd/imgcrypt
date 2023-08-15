@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -29,6 +30,7 @@ import (
 	"github.com/containerd/containerd/content"
 	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/log"
+	"github.com/containerd/containerd/remotes"
 	units "github.com/docker/go-units"
 	digest "github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -40,13 +42,14 @@ var (
 	// Command is the cli command for managing content
 	Command = cli.Command{
 		Name:  "content",
-		Usage: "manage content",
+		Usage: "Manage content",
 		Subcommands: cli.Commands{
 			activeIngestCommand,
 			deleteCommand,
 			editCommand,
 			fetchCommand,
 			fetchObjectCommand,
+			fetchBlobCommand,
 			getCommand,
 			ingestCommand,
 			listCommand,
@@ -58,7 +61,7 @@ var (
 
 	getCommand = cli.Command{
 		Name:        "get",
-		Usage:       "get the data for an object",
+		Usage:       "Get the data for an object",
 		ArgsUsage:   "[<digest>, ...]",
 		Description: "display the image object",
 		Action: func(context *cli.Context) error {
@@ -87,17 +90,17 @@ var (
 
 	ingestCommand = cli.Command{
 		Name:        "ingest",
-		Usage:       "accept content into the store",
+		Usage:       "Accept content into the store",
 		ArgsUsage:   "[flags] <key>",
 		Description: "ingest objects into the local content store",
 		Flags: []cli.Flag{
 			cli.Int64Flag{
 				Name:  "expected-size",
-				Usage: "validate against provided size",
+				Usage: "Validate against provided size",
 			},
 			cli.StringFlag{
 				Name:  "expected-digest",
-				Usage: "verify content against expected digest",
+				Usage: "Verify content against expected digest",
 			},
 		},
 		Action: func(context *cli.Context) error {
@@ -129,18 +132,18 @@ var (
 
 	activeIngestCommand = cli.Command{
 		Name:        "active",
-		Usage:       "display active transfers",
+		Usage:       "Display active transfers",
 		ArgsUsage:   "[flags] [<regexp>]",
 		Description: "display the ongoing transfers",
 		Flags: []cli.Flag{
 			cli.DurationFlag{
 				Name:   "timeout, t",
-				Usage:  "total timeout for fetch",
+				Usage:  "Total timeout for fetch",
 				EnvVar: "CONTAINERD_FETCH_TIMEOUT",
 			},
 			cli.StringFlag{
 				Name:  "root",
-				Usage: "path to content store root",
+				Usage: "Path to content store root",
 				Value: "/tmp/content", // TODO(stevvooe): for now, just use the PWD/.content
 			},
 		},
@@ -172,13 +175,13 @@ var (
 	listCommand = cli.Command{
 		Name:        "list",
 		Aliases:     []string{"ls"},
-		Usage:       "list all blobs in the store",
+		Usage:       "List all blobs in the store",
 		ArgsUsage:   "[flags]",
 		Description: "list blobs in the content store",
 		Flags: []cli.Flag{
 			cli.BoolFlag{
 				Name:  "quiet, q",
-				Usage: "print only the blob digest",
+				Usage: "Print only the blob digest",
 			},
 		},
 		Action: func(context *cli.Context) error {
@@ -209,6 +212,7 @@ var (
 					for k, v := range info.Labels {
 						labelStrings = append(labelStrings, strings.Join([]string{k, v}, "="))
 					}
+					sort.Strings(labelStrings)
 					labels := strings.Join(labelStrings, ",")
 					if labels == "" {
 						labels = "-"
@@ -230,7 +234,7 @@ var (
 
 	setLabelsCommand = cli.Command{
 		Name:        "label",
-		Usage:       "add labels to content",
+		Usage:       "Add labels to content",
 		ArgsUsage:   "<digest> [<label>=<value> ...]",
 		Description: "labels blobs in the content store",
 		Action: func(context *cli.Context) error {
@@ -284,17 +288,17 @@ var (
 
 	editCommand = cli.Command{
 		Name:        "edit",
-		Usage:       "edit a blob and return a new digest",
+		Usage:       "Edit a blob and return a new digest",
 		ArgsUsage:   "[flags] <digest>",
 		Description: "edit a blob and return a new digest",
 		Flags: []cli.Flag{
 			cli.StringFlag{
 				Name:  "validate",
-				Usage: "validate the result against a format (json, mediatype, etc.)",
+				Usage: "Validate the result against a format (json, mediatype, etc.)",
 			},
 			cli.StringFlag{
 				Name:   "editor",
-				Usage:  "select editor (vim, emacs, etc.)",
+				Usage:  "Select editor (vim, emacs, etc.)",
 				EnvVar: "EDITOR",
 			},
 		},
@@ -354,7 +358,7 @@ var (
 	deleteCommand = cli.Command{
 		Name:      "delete",
 		Aliases:   []string{"del", "remove", "rm"},
-		Usage:     "permanently delete one or more blobs",
+		Usage:     "Permanently delete one or more blobs",
 		ArgsUsage: "[<digest>, ...]",
 		Description: `Delete one or more blobs permanently. Successfully deleted
 	blobs are printed to stdout.`,
@@ -402,7 +406,7 @@ var (
 	// needed.
 	fetchObjectCommand = cli.Command{
 		Name:        "fetch-object",
-		Usage:       "retrieve objects from a remote",
+		Usage:       "Retrieve objects from a remote",
 		ArgsUsage:   "[flags] <remote> <object> [<hint>, ...]",
 		Description: `Fetch objects by identifier from a remote.`,
 		Flags:       commands.RegistryFlags,
@@ -442,9 +446,63 @@ var (
 		},
 	}
 
+	fetchBlobCommand = cli.Command{
+		Name:        "fetch-blob",
+		Usage:       "Retrieve blobs from a remote",
+		ArgsUsage:   "[flags] <remote> [<digest>, ...]",
+		Description: `Fetch blobs by digests from a remote.`,
+		Flags:       commands.RegistryFlags,
+		Action: func(context *cli.Context) error {
+			var (
+				ref     = context.Args().First()
+				digests = context.Args().Tail()
+			)
+			if len(digests) == 0 {
+				return errors.New("must specify digests")
+			}
+			ctx, cancel := commands.AppContext(context)
+			defer cancel()
+
+			resolver, err := commands.GetResolver(ctx, context)
+			if err != nil {
+				return err
+			}
+
+			ctx = log.WithLogger(ctx, log.G(ctx).WithField("ref", ref))
+
+			log.G(ctx).Debugf("resolving")
+			fetcher, err := resolver.Fetcher(ctx, ref)
+			if err != nil {
+				return err
+			}
+
+			fetcherByDigest, ok := fetcher.(remotes.FetcherByDigest)
+			if !ok {
+				return fmt.Errorf("fetcher %T does not implement remotes.FetcherByDigest", fetcher)
+			}
+
+			for _, f := range digests {
+				dgst, err := digest.Parse(f)
+				if err != nil {
+					return err
+				}
+				rc, _, err := fetcherByDigest.FetchByDigest(ctx, dgst)
+				if err != nil {
+					return err
+				}
+				_, err = io.Copy(os.Stdout, rc)
+				rc.Close()
+				if err != nil {
+					return err
+				}
+			}
+			return nil
+		},
+	}
+
 	pushObjectCommand = cli.Command{
 		Name:        "push-object",
-		Usage:       "push an object to a remote",
+		Usage:       "Push an object to a remote",
 		ArgsUsage:   "[flags] <remote> <object> <type>",
 		Description: `Push objects by identifier to a remote.`,
 		Flags:       commands.RegistryFlags,
@@ -512,7 +570,7 @@ var (
 	}
 )
 
-func edit(context *cli.Context, rd io.Reader) (io.ReadCloser, error) {
+func edit(context *cli.Context, rd io.Reader) (_ io.ReadCloser, retErr error) {
 	editor := context.String("editor")
 	if editor == "" {
 		return nil, fmt.Errorf("editor is required")
@@ -523,8 +581,14 @@ func edit(context *cli.Context, rd io.Reader) (io.ReadCloser, error) {
 		return nil, err
 	}
 
-	if _, err := io.Copy(tmp, rd); err != nil {
-		tmp.Close()
+	defer func() {
+		if retErr != nil {
+			os.Remove(tmp.Name())
+		}
+	}()
+	_, err = io.Copy(tmp, rd)
+	tmp.Close()
+	if err != nil {
 		return nil, err
 	}
 
@@ -536,17 +600,15 @@ func edit(context *cli.Context, rd io.Reader) (io.ReadCloser, error) {
 	cmd.Env = os.Environ()
 
 	if err := cmd.Run(); err != nil {
-		tmp.Close()
 		return nil, err
 	}
-
-	if _, err := tmp.Seek(0, io.SeekStart); err != nil {
-		tmp.Close()
+	// The editor might recreate new file and override the original one. We should reopen the file
+	edited, err := os.OpenFile(tmp.Name(), os.O_RDONLY, 0600)
+	if err != nil {
 		return nil, err
 	}
-
-	return onCloser{ReadCloser: tmp, onClose: func() error {
-		return os.RemoveAll(tmp.Name())
+	return onCloser{ReadCloser: edited, onClose: func() error {
+		return os.RemoveAll(edited.Name())
 	}}, nil
 }
 

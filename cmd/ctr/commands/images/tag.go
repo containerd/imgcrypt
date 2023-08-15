@@ -19,20 +19,26 @@ package images
 import (
 	"fmt"
 
+	"github.com/urfave/cli"
+
 	"github.com/containerd/containerd/cmd/ctr/commands"
 	"github.com/containerd/containerd/errdefs"
-	"github.com/urfave/cli"
+	"github.com/containerd/containerd/pkg/transfer/image"
 )
 
 var tagCommand = cli.Command{
 	Name:        "tag",
-	Usage:       "tag an image",
+	Usage:       "Tag an image",
 	ArgsUsage:   "[flags] <source_ref> <target_ref> [<target_ref>, ...]",
 	Description: `Tag an image for use in containerd.`,
 	Flags: []cli.Flag{
 		cli.BoolFlag{
 			Name:  "force",
-			Usage: "force target_ref to be created, regardless if it already exists",
+			Usage: "Force target_ref to be created, regardless if it already exists",
+		},
+		cli.BoolTFlag{
+			Name:  "local",
+			Usage: "Run tag locally rather than through transfer API",
 		},
 	},
 	Action: func(context *cli.Context) error {
@@ -51,6 +57,17 @@ var tagCommand = cli.Command{
 			return err
 		}
 		defer cancel()
+
+		if !context.BoolT("local") {
+			for _, targetRef := range context.Args()[1:] {
+				err = client.Transfer(ctx, image.NewStore(ref), image.NewStore(targetRef))
+				if err != nil {
+					return err
+				}
+				fmt.Println(targetRef)
+			}
+			return nil
+		}
 
 		ctx, done, err := client.WithLease(ctx)
 		if err != nil {

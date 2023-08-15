@@ -28,17 +28,17 @@ import (
 
 var deleteCommand = cli.Command{
 	Name:      "delete",
-	Usage:     "delete one or more tasks",
+	Usage:     "Delete one or more tasks",
 	ArgsUsage: "CONTAINER [CONTAINER, ...]",
 	Aliases:   []string{"del", "remove", "rm"},
 	Flags: []cli.Flag{
 		cli.BoolFlag{
 			Name:  "force, f",
-			Usage: "force delete task process",
+			Usage: "Force delete task process",
 		},
 		cli.StringFlag{
 			Name:  "exec-id",
-			Usage: "process ID to kill",
+			Usage: "Process ID to kill",
 		},
 	},
 	Action: func(context *cli.Context) error {

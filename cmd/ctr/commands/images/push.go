@@ -32,6 +32,9 @@ import (
 	"github.com/containerd/containerd/images"
 	"github.com/containerd/containerd/log"
 	"github.com/containerd/containerd/pkg/progress"
+	"github.com/containerd/containerd/pkg/transfer"
+	"github.com/containerd/containerd/pkg/transfer/image"
+	"github.com/containerd/containerd/pkg/transfer/registry"
 	"github.com/containerd/containerd/platforms"
 	"github.com/containerd/containerd/remotes"
 	"github.com/containerd/containerd/remotes/docker"
@@ -43,7 +46,7 @@ import (
 
 var pushCommand = cli.Command{
 	Name:      "push",
-	Usage:     "push an image to a remote",
+	Usage:     "Push an image to a remote",
 	ArgsUsage: "[flags] <remote> [<local>]",
 	Description: `Pushes an image reference from containerd.
 
@@ -56,18 +59,21 @@ var pushCommand = cli.Command{
 `,
 	Flags: append(commands.RegistryFlags, cli.StringFlag{
 		Name:  "manifest",
-		Usage: "digest of manifest",
+		Usage: "Digest of manifest",
 	}, cli.StringFlag{
 		Name:  "manifest-type",
-		Usage: "media type of manifest digest",
+		Usage: "Media type of manifest digest",
 		Value: ocispec.MediaTypeImageManifest,
 	}, cli.StringSliceFlag{
 		Name:  "platform",
-		Usage: "push content from a specific platform",
+		Usage: "Push content from a specific platform",
 		Value: &cli.StringSlice{},
 	}, cli.IntFlag{
 		Name:  "max-concurrent-uploaded-layers",
 		Usage: "Set the max concurrent uploaded layers for each push",
+	}, cli.BoolTFlag{
+		Name:  "local",
+		Usage: "Push content from local client rather than using transfer service",
 	}, cli.BoolFlag{
 		Name:  "allow-non-distributable-blobs",
 		Usage: "Allow pushing blobs that are marked as non-distributable",
@@ -88,6 +94,24 @@ var pushCommand = cli.Command{
 			return err
 		}
 		defer cancel()
+
+		if !context.BoolT("local") {
+			ch, err := commands.NewStaticCredentials(ctx, context, ref)
+			if err != nil {
+				return err
+			}
+
+			if local == "" {
+				local = ref
+			}
+			reg := registry.NewOCIRegistry(ref, nil, ch)
+			is := image.NewStore(local)
+
+			pf, done := ProgressHandler(ctx, os.Stdout)
+			defer done()
+
+			return client.Transfer(ctx, is, reg, transfer.WithProgress(pf))
+		}
 
 		if manifest := context.String("manifest"); manifest != "" {
 			desc.Digest, err = digest.Parse(manifest)
@@ -247,7 +271,7 @@ func (j *pushjobs) status() []content.StatusInfo {
 
 		status, err := j.tracker.GetStatus(name)
 		if err != nil {
-			si.Status = "waiting"
+			si.Status = content.StatusWaiting
 		} else {
 			si.Offset = status.Offset
 			si.Total = status.Total
@@ -255,12 +279,12 @@ func (j *pushjobs) status() []content.StatusInfo {
 			si.UpdatedAt = status.UpdatedAt
 			if status.Offset >= status.Total {
 				if status.UploadUUID == "" {
-					si.Status = "done"
+					si.Status = content.StatusDone
 				} else {
-					si.Status = "committing"
+					si.Status = content.StatusCommitting
 				}
 			} else {
-				si.Status = "uploading"
+				si.Status = content.StatusUploading
 			}
 		}
 		statuses = append(statuses, si)

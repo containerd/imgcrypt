@@ -28,8 +28,12 @@ import (
 // Command is a cli command to output the client and containerd server version
 var Command = cli.Command{
 	Name:  "version",
-	Usage: "print the client and server versions",
+	Usage: "Print the client and server versions",
 	Action: func(context *cli.Context) error {
+		if context.NArg() != 0 {
+			return fmt.Errorf("extra arguments: %v", context.Args())
+		}
+
 		fmt.Println("Client:")
 		fmt.Println("  Version: ", version.Version)
 		fmt.Println("  Revision:", version.Revision)
