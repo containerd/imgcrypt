@@ -23,7 +23,7 @@ import (
 	"github.com/containerd/containerd/cmd/ctr/commands"
 	"github.com/containerd/containerd/events"
 	"github.com/containerd/containerd/log"
-	"github.com/containerd/typeurl"
+	"github.com/containerd/typeurl/v2"
 	"github.com/urfave/cli"
 
 	// Register grpc event types
@@ -34,7 +34,7 @@ import (
 var Command = cli.Command{
 	Name:    "events",
 	Aliases: []string{"event"},
-	Usage:   "display containerd events",
+	Usage:   "Display containerd events",
 	Action: func(context *cli.Context) error {
 		client, ctx, cancel, err := commands.NewClient(context)
 		if err != nil {

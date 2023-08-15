@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -43,7 +44,7 @@ import (
 var Command = cli.Command{
 	Name:    "snapshots",
 	Aliases: []string{"snapshot"},
-	Usage:   "manage snapshots",
+	Usage:   "Manage snapshots",
 	Flags:   commands.SnapshotterFlags,
 	Subcommands: cli.Commands{
 		commitCommand,
@@ -64,7 +65,7 @@ var Command = cli.Command{
 var listCommand = cli.Command{
 	Name:    "list",
 	Aliases: []string{"ls"},
-	Usage:   "list snapshots",
+	Usage:   "List snapshots",
 	Action: func(context *cli.Context) error {
 		client, ctx, cancel, err := commands.NewClient(context)
 		if err != nil {
@@ -92,21 +93,21 @@ var listCommand = cli.Command{
 
 var diffCommand = cli.Command{
 	Name:      "diff",
-	Usage:     "get the diff of two snapshots. the default second snapshot is the first snapshot's parent.",
+	Usage:     "Get the diff of two snapshots. the default second snapshot is the first snapshot's parent.",
 	ArgsUsage: "[flags] <idA> [<idB>]",
 	Flags: append([]cli.Flag{
 		cli.StringFlag{
 			Name:  "media-type",
-			Usage: "media type to use for creating diff",
+			Usage: "Media type to use for creating diff",
 			Value: ocispec.MediaTypeImageLayerGzip,
 		},
 		cli.StringFlag{
 			Name:  "ref",
-			Usage: "content upload reference to use",
+			Usage: "Content upload reference to use",
 		},
 		cli.BoolFlag{
 			Name:  "keep",
-			Usage: "keep diff content. up to creator to delete it.",
+			Usage: "Keep diff content. up to creator to delete it.",
 		},
 	}, commands.LabelFlag),
 	Action: func(context *cli.Context) error {
@@ -141,6 +142,7 @@ var diffCommand = cli.Command{
 			diff.WithReference(context.String("ref")),
 			diff.WithLabels(labels),
 		}
+		// SOURCE_DATE_EPOCH is propagated via the ctx, so no need to specify diff.WithSourceDateEpoch here
 
 		if idB == "" {
 			desc, err = rootfs.CreateDiff(ctx, idA, snapshotter, client.DiffService(), opts...)
@@ -193,12 +195,12 @@ func withMounts(ctx gocontext.Context, id string, sn snapshots.Snapshotter, f fu
 
 var usageCommand = cli.Command{
 	Name:      "usage",
-	Usage:     "usage snapshots",
+	Usage:     "Usage snapshots",
 	ArgsUsage: "[flags] [<key>, ...]",
 	Flags: []cli.Flag{
 		cli.BoolFlag{
 			Name:  "b",
-			Usage: "display size in bytes",
+			Usage: "Display size in bytes",
 		},
 	},
 	Action: func(context *cli.Context) error {
@@ -251,7 +253,7 @@ var removeCommand = cli.Command{
 	Name:      "delete",
 	Aliases:   []string{"del", "remove", "rm"},
 	ArgsUsage: "<key> [<key>, ...]",
-	Usage:     "remove snapshots",
+	Usage:     "Remove snapshots",
 	Action: func(context *cli.Context) error {
 		client, ctx, cancel, err := commands.NewClient(context)
 		if err != nil {
@@ -272,12 +274,12 @@ var removeCommand = cli.Command{
 
 var prepareCommand = cli.Command{
 	Name:      "prepare",
-	Usage:     "prepare a snapshot from a committed snapshot",
+	Usage:     "Prepare a snapshot from a committed snapshot",
 	ArgsUsage: "[flags] <key> [<parent>]",
 	Flags: []cli.Flag{
 		cli.StringFlag{
 			Name:  "target, t",
-			Usage: "mount target path, will print mount, if provided",
+			Usage: "Mount target path, will print mount, if provided",
 		},
 		cli.BoolFlag{
 			Name:  "mounts",
@@ -323,12 +325,12 @@ var prepareCommand = cli.Command{
 
 var viewCommand = cli.Command{
 	Name:      "view",
-	Usage:     "create a read-only snapshot from a committed snapshot",
+	Usage:     "Create a read-only snapshot from a committed snapshot",
 	ArgsUsage: "[flags] <key> [<parent>]",
 	Flags: []cli.Flag{
 		cli.StringFlag{
 			Name:  "target, t",
-			Usage: "mount target path, will print mount, if provided",
+			Usage: "Mount target path, will print mount, if provided",
 		},
 		cli.BoolFlag{
 			Name:  "mounts",
@@ -371,7 +373,7 @@ var viewCommand = cli.Command{
 var mountCommand = cli.Command{
 	Name:      "mounts",
 	Aliases:   []string{"m", "mount"},
-	Usage:     "mount gets mount commands for the snapshots",
+	Usage:     "Mount gets mount commands for the snapshots",
 	ArgsUsage: "<target> <key>",
 	Action: func(context *cli.Context) error {
 		if context.NArg() != 2 {
@@ -400,7 +402,7 @@ var mountCommand = cli.Command{
 
 var commitCommand = cli.Command{
 	Name:      "commit",
-	Usage:     "commit an active snapshot into the provided name",
+	Usage:     "Commit an active snapshot into the provided name",
 	ArgsUsage: "<key> <active>",
 	Action: func(context *cli.Context) error {
 		if context.NArg() != 2 {
@@ -425,7 +427,7 @@ var commitCommand = cli.Command{
 
 var treeCommand = cli.Command{
 	Name:  "tree",
-	Usage: "display tree view of snapshot branches",
+	Usage: "Display tree view of snapshot branches",
 	Action: func(context *cli.Context) error {
 		client, ctx, cancel, err := commands.NewClient(context)
 		if err != nil {
@@ -453,7 +455,7 @@ var treeCommand = cli.Command{
 
 var infoCommand = cli.Command{
 	Name:      "info",
-	Usage:     "get info about a snapshot",
+	Usage:     "Get info about a snapshot",
 	ArgsUsage: "<key>",
 	Action: func(context *cli.Context) error {
 		if context.NArg() != 1 {
@@ -480,7 +482,7 @@ var infoCommand = cli.Command{
 
 var setLabelCommand = cli.Command{
 	Name:        "label",
-	Usage:       "add labels to content",
+	Usage:       "Add labels to content",
 	ArgsUsage:   "<name> [<label>=<value> ...]",
 	Description: "labels snapshots in the snapshotter",
 	Action: func(context *cli.Context) error {
@@ -529,7 +531,7 @@ var setLabelCommand = cli.Command{
 
 var unpackCommand = cli.Command{
 	Name:      "unpack",
-	Usage:     "unpack applies layers from a manifest to a snapshot",
+	Usage:     "Unpack applies layers from a manifest to a snapshot",
 	ArgsUsage: "[flags] <digest>",
 	Flags:     commands.SnapshotterFlags,
 	Action: func(context *cli.Context) error {
@@ -639,6 +641,6 @@ func printNode(name string, tree *snapshotTree, level int) {
 func printMounts(target string, mounts []mount.Mount) {
 	// FIXME: This is specific to Unix
 	for _, m := range mounts {
-		fmt.Printf("mount -t %s %s %s -o %s\n", m.Type, m.Source, target, strings.Join(m.Options, ","))
+		fmt.Printf("mount -t %s %s %s -o %s\n", m.Type, m.Source, filepath.Join(target, m.Target), strings.Join(m.Options, ","))
 	}
 }
