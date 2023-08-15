@@ -1,6 +1,6 @@
 module github.com/containerd/imgcrypt
 
-go 1.19
+go 1.20
 
 require (
 	github.com/Microsoft/go-winio v0.5.2
