@@ -107,7 +107,7 @@ jobs:
           sudo rm /usr/local/bin/ctr
 
           mkdir ../../lumjjb && pushd ../../lumjjb
-          git clone https://github.com/lumjjb/simple-ocicrypt-keyprovider && cd simple-ocicrypt-keyprovider
+          git clone https://github.com/stefanberger/simple-ocicrypt-keyprovider && cd simple-ocicrypt-keyprovider
           make
           sudo cp simple_crypt /usr/local/bin
           popd
