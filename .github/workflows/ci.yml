@@ -108,10 +108,12 @@ jobs:
 
           mkdir ../../lumjjb && pushd ../../lumjjb
           git clone https://github.com/lumjjb/simple-ocicrypt-keyprovider && cd simple-ocicrypt-keyprovider
-          make
-          sudo cp simple_crypt /usr/local/bin
+          #make
+          #sudo cp simple_crypt /usr/local/bin
           popd
 
+          ls -l
+          cat go.mod
           RUNC_COMMIT=$(grep opencontainers/runc go.mod | awk '{print $2}')
 
           pushd ../..
