@@ -112,7 +112,7 @@ jobs:
           sudo cp simple_crypt /usr/local/bin
           popd
 
-          RUNC_COMMIT=$(grep opencontainers/runc go.mod | awk '{print $2}')
+          RUNC_COMMIT=v1.1.9
 
           pushd ../..
           rm -fR opencontainers/runc && mkdir -p opencontainers && cd opencontainers
