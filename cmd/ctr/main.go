@@ -28,6 +28,7 @@ import (
 var pluginCmds = []cli.Command{}
 
 func init() {
+	//nolint:staticcheck // Global math/rand seed is deprecated, but still used by external dependencies
 	seed.WithTimeAndRand()
 }
 
