@@ -34,10 +34,10 @@ var encryptCommand = cli.Command{
 	ArgsUsage: "[flags] <local> <new name>",
 	Description: `Encrypt an image locally.
 
-	Encrypt an image using public keys managed by GPG.
+	Encrypt an image using public keys.
 	The user must provide recpients who will be able to decrypt the image using
-	their GPG-managed private key. For this the user's GPG keyring must hold the public
-	keys of the recipients.
+	their RSA, EC, or GPG-managed private key. If GPG keys are used then the
+	user's GPG keyring must hold the public keys of the recipients.
 	The user has control over the individual layers and the platforms they are
 	associated with and can encrypt them separately. If no layers or platforms are
 	specified, all layers for all platforms will be encrypted.

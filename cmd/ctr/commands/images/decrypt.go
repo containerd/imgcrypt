@@ -37,7 +37,7 @@ var decryptCommand = cli.Command{
 
 	Decrypt an image using private keys.
 	The user has contol over which layers to decrypt and for which platform.
-	If no payers or platforms are specified, all layers for all platforms are
+	If no layers or platforms are specified, all layers for all platforms are
 	decrypted.
 
 	Private keys in PEM format may be encrypted and the password may be passed
