@@ -105,6 +105,7 @@ github.com/containerd/containerd/identifiers
 github.com/containerd/containerd/images
 github.com/containerd/containerd/images/archive
 github.com/containerd/containerd/images/converter
+github.com/containerd/containerd/images/converter/uncompress
 github.com/containerd/containerd/labels
 github.com/containerd/containerd/leases
 github.com/containerd/containerd/leases/proxy
@@ -186,7 +187,7 @@ github.com/containernetworking/cni/pkg/version
 # github.com/containernetworking/plugins v1.1.1
 ## explicit; go 1.17
 github.com/containernetworking/plugins/pkg/ns
-# github.com/containers/ocicrypt v1.1.9
+# github.com/containers/ocicrypt v1.1.10
 ## explicit; go 1.20
 github.com/containers/ocicrypt
 github.com/containers/ocicrypt/blockcipher
