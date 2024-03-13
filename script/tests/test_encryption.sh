@@ -51,6 +51,10 @@ JWKTESTKEY1='{"d":"pGBXnqbPbMR6PIPkyzz1OhmJq4ORmlHwh2GunXJuzSj1AhYL9rZ8fd_NNn128
 
 JWKTESTPUBKEY1='{"e":"AQAB","kty":"RSA","n":"zMwIcZn24y3Aj-P5Vox-w54FkpoRGeYGhyF7rdDQN2bYO-8h09doVbbgstYauyZKRvk3iWoOwfY9foD0hHCJNtT20sqbx40osGN9qLERweO6Xn8adhVPN7isTT9KozdvsrOIBr7uQUsruvow4klIYrv5FqS_RHpy4f0CUlsjPqc3F5PC4yV0D0f_QUApr06--uHRdH3ucunvdwR1V1IZV0DEJwZ5DzEDQmynzo5oV1UVNb9DSzTXsUAzSipCrdIyUxCnofPp_PzKvqMbctBAchx0AKN8IK8Z3RGFYyrV3HxkXqFxZ4aTVnkXqlnGV5CRQhx59ckIWUxAlyLcGLXvmw"}'
 
+# EC key
+JWKECTESTKEY1='{"kty":"EC","d":"ARwSGZOvkGPWdpftnk62s1dgapkHyPRg4Ey5dvn1Wucqs7xi4r930_d9BAmlnzRD3RgoE3wPLQhx_fJD18w1Ahec","use":"enc","crv":"P-521","kid":"bFYCcZ5aVw7LcnI8okm0cOSAnYw3mJ7r6jxCyxi93bc","x":"AZrywzluGZObiNdzRGGQNCmIfpy3k2iV8Z2dy_5QoF7aL5lCqBEmMMRHRTmP0XX-dS_nXrb9d-XcB53vBauNMars","y":"AIjZjRuVvl5jNk8PxqgmpJGFluyYC4PkTXZBb7HhzYaXWNcVVkCrGP5tmz2KkYYH9TKRAr564Q-wT13AzLVF9aj3","alg":"ECDH-ES+A128KW"}'
+JWKECTESTPUBKEY1='{"kty":"EC","use":"enc","crv":"P-521","kid":"bFYCcZ5aVw7LcnI8okm0cOSAnYw3mJ7r6jxCyxi93bc","x":"AZrywzluGZObiNdzRGGQNCmIfpy3k2iV8Z2dy_5QoF7aL5lCqBEmMMRHRTmP0XX-dS_nXrb9d-XcB53vBauNMars","y":"AIjZjRuVvl5jNk8PxqgmpJGFluyYC4PkTXZBb7HhzYaXWNcVVkCrGP5tmz2KkYYH9TKRAr564Q-wT13AzLVF9aj3","alg":"ECDH-ES+A128KW"}'
+
 trap "cleanup" EXIT QUIT
 
 cleanup() {
@@ -460,6 +464,9 @@ createJWEKeys() {
 	PRIVKEYJWK=${WORKDIR}/mykey.jwk
 	PUBKEYJWK=${WORKDIR}/mypubkey.jwk
 
+	ECPRIVKEYJWK=${WORKDIR}/my-ec-key.jwk
+	ECPUBKEYJWK=${WORKDIR}/my-ec-pubkey.jwk
+
 	ECPRIVKEYDER=${WORKDIR}/myeckey.der
 	ECPUBKEYDER=${WORKDIR}/myecpubkey.der
 
@@ -512,6 +519,9 @@ createJWEKeys() {
 
 	echo "${JWKTESTKEY1}" >${PRIVKEYJWK}
 	echo "${JWKTESTPUBKEY1}" >${PUBKEYJWK}
+
+	echo "${JWKECTESTKEY1}" >${ECPRIVKEYJWK}
+	echo "${JWKECTESTPUBKEY1}" >${ECPUBKEYJWK}
 }
 
 testJWE() {
@@ -601,43 +611,81 @@ testJWE() {
 	echo "Testing JWE encryption with a JWK"
 
 	# The JWK needs a separate test since it's a different key than the other ones
+	# Test with RSA key
 	for recipient in jwe:${PUBKEYJWK}; do
 		$CTR images encrypt \
 			--recipient ${recipient} \
 			${ALPINE} ${ALPINE_ENC}
-		failExit $? "Image encryption with JWE failed; public key: ${recipient}"
+		failExit $? "Image encryption with JWE failed; RSA public key: ${recipient}"
 
 		LAYER_INFO_ALPINE_ENC="$($CTR images layerinfo ${ALPINE_ENC})"
-		failExit $? "Image layerinfo on JWE encrypted image failed; public key: ${recipient}"
+		failExit $? "Image layerinfo on JWE encrypted image failed; RSA public key: ${recipient}"
 
 		diff <(echo "${LAYER_INFO_ALPINE}" | gawk '{print $3}') \
 			<(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $3}')
-		failExit $? "Image layerinfo on JWE encrypted image shows differences in architectures"
+		failExit $? "Image layerinfo on JWE encrypted image shows differences in architectures (RSA)"
 
 		diff <(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $5}' | sort | uniq | tr -d '\n') \
 			<(echo -n "ENCRYPTIONjwe")
-		failExit $? "Image layerinfo on JWE encrypted image shows unexpected encryption"
+		failExit $? "Image layerinfo on JWE encrypted image shows unexpected encryption (RSA)"
 
 		for privkey in ${PRIVKEYJWK}; do
 			$CTR images decrypt \
 				--key ${privkey} \
 				${ALPINE_ENC} ${ALPINE_DEC}
-			failExit $? "Image decryption with JWE failed: private key: ${privkey}"
+			failExit $? "Image decryption with JWE failed: RSA private key: ${privkey}"
 
 			LAYER_INFO_ALPINE_DEC="$($CTR images layerinfo ${ALPINE_DEC})"
-			failExit $? "Image layerinfo on decrypted image failed (JWE)"
+			failExit $? "Image layerinfo on decrypted image failed (JWE,RSA)"
 
 			diff <(echo "${LAYER_INFO_ALPINE}") <(echo "${LAYER_INFO_ALPINE_DEC}")
-			failExit $? "Image layerinfos are different (JWE)"
+			failExit $? "Image layerinfos are different (JWE,RSA)"
 
 			$CTR images rm --sync ${ALPINE_DEC} &>/dev/null
-			echo "Decryption with ${privkey} worked."
+			echo "Decryption with ${privkey} (RSA) worked."
 		done
 		$CTR images rm --sync ${ALPINE_ENC} &>/dev/null
-		echo "Encryption with ${recipient} worked"
+		echo "Encryption with ${recipient} (RSA) worked"
 	done
 
-	echo "PASS: JWE encryption with a JWK"
+	# Test with EC key
+	for recipient in jwe:${ECPUBKEYJWK}; do
+		$CTR images encrypt \
+			--recipient ${recipient} \
+			${ALPINE} ${ALPINE_ENC}
+		failExit $? "Image encryption with JWE failed; EC public key: ${recipient}"
+
+		LAYER_INFO_ALPINE_ENC="$($CTR images layerinfo ${ALPINE_ENC})"
+		failExit $? "Image layerinfo on JWE encrypted image failed; EC public key: ${recipient}"
+
+		diff <(echo "${LAYER_INFO_ALPINE}" | gawk '{print $3}') \
+			<(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $3}')
+		failExit $? "Image layerinfo on JWE encrypted image shows differences in architectures (EC)"
+
+		diff <(echo "${LAYER_INFO_ALPINE_ENC}" | gawk '{print $5}' | sort | uniq | tr -d '\n') \
+			<(echo -n "ENCRYPTIONjwe")
+		failExit $? "Image layerinfo on JWE encrypted image shows unexpected encryption (EC)"
+
+		for privkey in ${ECPRIVKEYJWK}; do
+			$CTR images decrypt \
+				--key ${privkey} \
+				${ALPINE_ENC} ${ALPINE_DEC}
+			failExit $? "Image decryption with JWE failed: EC private key: ${privkey}"
+
+			LAYER_INFO_ALPINE_DEC="$($CTR images layerinfo ${ALPINE_DEC})"
+			failExit $? "Image layerinfo on decrypted image failed (JWE,EC)"
+
+			diff <(echo "${LAYER_INFO_ALPINE}") <(echo "${LAYER_INFO_ALPINE_DEC}")
+			failExit $? "Image layerinfos are different (JWE,EC)"
+
+			$CTR images rm --sync ${ALPINE_DEC} &>/dev/null
+			echo "Decryption with ${privkey} (EC) worked."
+		done
+		$CTR images rm --sync ${ALPINE_ENC} &>/dev/null
+		echo "Encryption with ${recipient} (EC) worked"
+	done
+
+	echo "PASS: JWE encryption with JWK's (RSA & EC)"
 
 	$CTR images rm --sync ${ALPINE_DEC} ${ALPINE_ENC} &>/dev/null
 	echo
