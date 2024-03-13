@@ -1,5 +1,11 @@
 CHANGES
 
+v1.1.10:
+  - Updated to ocicrypt v1.1.10
+  - Added test cases with JKW EC key and added 2 more RSA keys
+  - Sync'ed enc-ctr with ctr of containerd v1.6.30
+  - Updated dependencies
+
 v1.1.9:
   - Updated to ocicrypt v1.1.9
   - Updated dependencies
