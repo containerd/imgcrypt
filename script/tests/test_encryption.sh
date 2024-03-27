@@ -89,7 +89,7 @@ setup() {
 startContainerd() {
 	cat <<_EOF_ >${CONFIG_TOML}
 version = 2
-disable_plugins = ["cri"]
+disabled_plugins = ["io.containerd.grpc.v1.cri"]
 root = "${ROOTDIR}"
 state = "${STATEDIR}"
 [grpc]
@@ -133,7 +133,7 @@ startContainerdLocalKeys() {
 	mkdir -p ${LOCAL_KEYS_PATH}
 	cat <<_EOF_ >${CONFIG_TOML}
 version = 2
-disable_plugins = ["cri"]
+disabled_plugins = ["io.containerd.grpc.v1.cri"]
 root = "${ROOTDIR}"
 state = "${STATEDIR}"
 [grpc]
