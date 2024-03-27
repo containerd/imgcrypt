@@ -68,6 +68,9 @@ cleanup() {
 	if [ -n "$CONTAINERD_PID" ]; then
 		sudo kill -9 ${CONTAINERD_PID}
 	fi
+	if [ -n "${LOGFILE}" ]; then
+		sudo cat "${LOGFILE}"
+	fi
 	if [ -n "${WORKDIR}" ]; then
 		sudo rm -rf ${WORKDIR}
 	fi
