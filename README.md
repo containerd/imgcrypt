@@ -25,7 +25,8 @@ installation we use /tmp for directories. Also, we build containerd 1.3 from the
 
 ```
 # cat config.toml
-disable_plugins = ["cri"]
+version = 2
+disabled_plugins = ["io.containerd.grpc.v1.cri"]
 root = "/tmp/var/lib/containerd"
 state = "/tmp/run/containerd"
 [grpc]
