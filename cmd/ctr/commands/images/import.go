@@ -22,16 +22,16 @@ import (
 	"os"
 	"time"
 
-	"github.com/containerd/containerd"
-	"github.com/containerd/containerd/cmd/ctr/commands"
-	"github.com/containerd/containerd/images/archive"
-	"github.com/containerd/containerd/log"
-	"github.com/containerd/containerd/platforms"
+	containerd "github.com/containerd/containerd/v2/client"
+	"github.com/containerd/containerd/v2/cmd/ctr/commands"
+	"github.com/containerd/containerd/v2/core/images/archive"
 	"github.com/containerd/imgcrypt"
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/flags"
 	"github.com/containerd/imgcrypt/images/encryption"
 	"github.com/containerd/imgcrypt/images/encryption/parsehelpers"
-	"github.com/urfave/cli"
+	"github.com/containerd/log"
+	"github.com/containerd/platforms"
+	"github.com/urfave/cli/v2"
 )
 
 var importCommand = cli.Command{
@@ -60,36 +60,36 @@ decrypted it is required that the user proofs to be in possession of one of the 
 decrypting the image later on.
 `,
 	Flags: append(append([]cli.Flag{
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "base-name",
 			Value: "",
 			Usage: "base image name for added images, when provided only images with this name prefix are imported",
 		},
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name:  "digests",
 			Usage: "whether to create digest images (default: false)",
 		},
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name:  "skip-digest-for-named",
 			Usage: "skip applying --digests option to images named in the importing tar (use it in conjunction with --digests)",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "index-name",
 			Usage: "image name to keep index as, by default index is discarded",
 		},
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name:  "all-platforms",
 			Usage: "imports content for all platforms, false by default",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "platform",
 			Usage: "imports content for specific platform",
 		},
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name:  "no-unpack",
 			Usage: "skip unpacking the images, false by default",
 		},
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name:  "compress-blobs",
 			Usage: "compress uncompressed blobs when creating manifest (Docker format only)",
 		},

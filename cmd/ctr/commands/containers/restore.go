@@ -19,11 +19,11 @@ package containers
 import (
 	"errors"
 
-	"github.com/containerd/containerd"
-	"github.com/containerd/containerd/cio"
-	"github.com/containerd/containerd/cmd/ctr/commands"
-	"github.com/containerd/containerd/errdefs"
-	"github.com/urfave/cli"
+	containerd "github.com/containerd/containerd/v2/client"
+	"github.com/containerd/containerd/v2/cmd/ctr/commands"
+	"github.com/containerd/containerd/v2/pkg/cio"
+	"github.com/containerd/errdefs"
+	"github.com/urfave/cli/v2"
 )
 
 var restoreCommand = cli.Command{
@@ -31,11 +31,11 @@ var restoreCommand = cli.Command{
 	Usage:     "restore a container from checkpoint",
 	ArgsUsage: "CONTAINER REF",
 	Flags: []cli.Flag{
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name:  "rw",
 			Usage: "restore the rw layer from the checkpoint",
 		},
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name:  "live",
 			Usage: "restore the runtime and memory data from the checkpoint",
 		},

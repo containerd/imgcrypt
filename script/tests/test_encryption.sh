@@ -68,6 +68,9 @@ cleanup() {
 	if [ -n "$CONTAINERD_PID" ]; then
 		sudo kill -9 ${CONTAINERD_PID}
 	fi
+	if [ -n "${LOGFILE}" ]; then
+		sudo cat "${LOGFILE}"
+	fi
 	if [ -n "${WORKDIR}" ]; then
 		sudo rm -rf ${WORKDIR}
 	fi
@@ -190,7 +193,7 @@ pullImages() {
 		echo "Note: Image pull credentials can be passed with env. variable IMAGE_PULL_CREDS=<username>:<password>"
 	fi
 	$CTR images rm --sync ${ALPINE_ENC} ${ALPINE_DEC} ${NGINX_ENC} ${NGINX_DEC} ${BASH_ENC} &>/dev/null
-	$CTR images pull ${IMAGE_PULL_CREDS:+--user ${IMAGE_PULL_CREDS}} --all-platforms ${ALPINE} &>/dev/null
+	$CTR images pull ${IMAGE_PULL_CREDS:+--user ${IMAGE_PULL_CREDS}} --all-platforms ${ALPINE}
 	failExit $? "Image pull failed on ${ALPINE}"
 
 	$CTR images pull ${IMAGE_PULL_CREDS:+--user ${IMAGE_PULL_CREDS}} --platform linux/amd64 ${NGINX} &>/dev/null

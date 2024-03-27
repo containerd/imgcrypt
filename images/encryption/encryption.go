@@ -25,11 +25,11 @@ import (
 	"io"
 	"math/rand"
 
-	"github.com/containerd/containerd/content"
-	"github.com/containerd/containerd/errdefs"
-	"github.com/containerd/containerd/images"
-	"github.com/containerd/containerd/images/converter"
-	"github.com/containerd/containerd/platforms"
+	"github.com/containerd/containerd/v2/core/content"
+	"github.com/containerd/containerd/v2/core/images"
+	"github.com/containerd/containerd/v2/core/images/converter"
+	"github.com/containerd/errdefs"
+	"github.com/containerd/platforms"
 
 	"github.com/containers/ocicrypt"
 	encconfig "github.com/containers/ocicrypt/config"
@@ -316,7 +316,7 @@ func cryptChildren(ctx context.Context, cs content.Store, desc ocispec.Descripto
 			} else {
 				newLayers = append(newLayers, child)
 			}
-		case images.MediaTypeDockerSchema2LayerForeign, images.MediaTypeDockerSchema2LayerForeignGzip:
+		case images.MediaTypeDockerSchema2LayerForeign, images.MediaTypeDockerSchema2LayerForeignGzip, "application/vnd.in-toto+json":
 			// never encrypt/decrypt
 			newLayers = append(newLayers, child)
 		default:
