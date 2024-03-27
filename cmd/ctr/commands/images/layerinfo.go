@@ -24,13 +24,13 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/containerd/containerd/cmd/ctr/commands"
-	"github.com/containerd/containerd/platforms"
+	"github.com/containerd/containerd/v2/cmd/ctr/commands"
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/img"
 	"github.com/containerd/imgcrypt/images/encryption/parsehelpers"
+	"github.com/containerd/platforms"
 	"github.com/containers/ocicrypt"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 var layerinfoCommand = cli.Command{
@@ -46,19 +46,19 @@ var layerinfoCommand = cli.Command{
 	layers or platforms are specified, infomration for all layers and all
 	platforms will be retrieved.
 `,
-	Flags: append(commands.RegistryFlags, cli.IntSliceFlag{
+	Flags: append(commands.RegistryFlags, &cli.IntSliceFlag{
 		Name:  "layer",
 		Usage: "The layer to get info for; this must be either the layer number or a negative number starting with -1 for topmost layer",
-	}, cli.StringSliceFlag{
+	}, &cli.StringSliceFlag{
 		Name:  "platform",
 		Usage: "For which platform to get the layer info; by default info for all platforms is retrieved",
-	}, cli.StringFlag{
+	}, &cli.StringFlag{
 		Name:  "gpg-homedir",
 		Usage: "The GPG homedir to use; by default gpg uses ~/.gnupg",
-	}, cli.StringFlag{
+	}, &cli.StringFlag{
 		Name:  "gpg-version",
 		Usage: "The GPG version (\"v1\" or \"v2\"), default will make an educated guess",
-	}, cli.BoolFlag{
+	}, &cli.BoolFlag{
 		Name:  "n",
 		Usage: "Do not resolve PGP key IDs to email addresses",
 	}),

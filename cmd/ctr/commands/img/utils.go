@@ -20,10 +20,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/containerd/containerd/content"
-	"github.com/containerd/containerd/errdefs"
-	"github.com/containerd/containerd/images"
-	"github.com/containerd/containerd/platforms"
+	"github.com/containerd/containerd/v2/core/content"
+	"github.com/containerd/containerd/v2/core/images"
+	"github.com/containerd/errdefs"
+	"github.com/containerd/platforms"
 
 	encocispec "github.com/containers/ocicrypt/spec"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"

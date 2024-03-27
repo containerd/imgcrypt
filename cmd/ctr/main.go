@@ -20,12 +20,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/containerd/containerd/pkg/seed" //nolint:staticcheck // Global math/rand seed is deprecated, but still used by external dependencies
+	"github.com/containerd/containerd/v2/pkg/seed" //nolint:staticcheck // Global math/rand seed is deprecated, but still used by external dependencies
 	"github.com/containerd/imgcrypt/cmd/ctr/app"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
-var pluginCmds = []cli.Command{}
+var pluginCmds = []*cli.Command{}
 
 func init() {
 	//nolint:staticcheck // Global math/rand seed is deprecated, but still used by external dependencies

@@ -17,26 +17,26 @@
 package flags
 
 import (
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 var (
 	// ImageDecryptionFlags are cli flags needed when decrypting an image
 	ImageDecryptionFlags = []cli.Flag{
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "gpg-homedir",
 			Usage: "The GPG homedir to use; by default gpg uses ~/.gnupg",
-		}, cli.StringFlag{
+		}, &cli.StringFlag{
 			Name:  "gpg-version",
 			Usage: "The GPG version (\"v1\" or \"v2\"), default will make an educated guess",
-		}, cli.BoolFlag{
+		}, &cli.BoolFlag{
 			Name:  "skip-decrypt-auth",
 			Usage: "Indicates if check authorization for use of images should be skipped i.e. for use in node key model",
 		},
-		cli.StringSliceFlag{
+		&cli.StringSliceFlag{
 			Name:  "key",
 			Usage: "A secret key's filename and an optional password separated by colon; this option may be provided multiple times",
-		}, cli.StringSliceFlag{
+		}, &cli.StringSliceFlag{
 			Name:  "dec-recipient",
 			Usage: "Recipient of the image; used only for PKCS7 and must be an x509 certificate",
 		},

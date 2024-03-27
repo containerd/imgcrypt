@@ -20,12 +20,12 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/containerd/containerd/cmd/ctr/commands"
+	"github.com/containerd/containerd/v2/cmd/ctr/commands"
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/flags"
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/img"
 	"github.com/containerd/imgcrypt/images/encryption/parsehelpers"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 var encryptCommand = cli.Command{
@@ -50,16 +50,16 @@ var encryptCommand = cli.Command{
     - jwe:<public-key-file-path>
     - pkcs7:<x509-file-path>
 `,
-	Flags: append(append(commands.RegistryFlags, cli.StringSliceFlag{
+	Flags: append(append(commands.RegistryFlags, &cli.StringSliceFlag{
 		Name:  "recipient",
 		Usage: "Recipient of the image is the person who can decrypt it in the form specified above (i.e. jwe:/path/to/key)",
-	}, cli.IntSliceFlag{
+	}, &cli.IntSliceFlag{
 		Name:  "layer",
 		Usage: "The layer to encrypt; this must be either the layer number or a negative number starting with -1 for topmost layer",
-	}, cli.BoolFlag{
+	}, &cli.BoolFlag{
 		Name:  "all-platforms",
 		Usage: "encrypt for all platforms; this is the default",
-	}, cli.StringSliceFlag{
+	}, &cli.StringSliceFlag{
 		Name:  "platform",
 		Usage: "For which platform to encrypt; by default encrytion is done for all platforms",
 	}), flags.ImageDecryptionFlags...),
