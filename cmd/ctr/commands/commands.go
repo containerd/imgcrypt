@@ -23,9 +23,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/containerd/containerd/pkg/atomicfile"
+	"github.com/containerd/containerd/v2/pkg/atomicfile"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 // ObjectWithLabelArgs returns the first arg and a LabelArgs object

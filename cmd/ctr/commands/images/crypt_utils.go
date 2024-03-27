@@ -21,14 +21,14 @@ import (
 
 	"strings"
 
-	"github.com/containerd/containerd"
-	"github.com/containerd/containerd/images"
-	"github.com/containerd/containerd/platforms"
+	containerd "github.com/containerd/containerd/v2/client"
+	"github.com/containerd/containerd/v2/core/images"
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/img"
 	imgenc "github.com/containerd/imgcrypt/images/encryption"
 	"github.com/containerd/imgcrypt/images/encryption/parsehelpers"
+	"github.com/containerd/platforms"
 	encconfig "github.com/containers/ocicrypt/config"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )

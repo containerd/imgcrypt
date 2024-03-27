@@ -24,36 +24,36 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/containerd/containerd/cmd/ctr/commands"
-	"github.com/containerd/containerd/errdefs"
-	"github.com/containerd/containerd/images"
-	"github.com/containerd/containerd/log"
-	"github.com/containerd/containerd/pkg/progress"
-	"github.com/containerd/containerd/platforms"
-	"github.com/urfave/cli"
+	"github.com/containerd/containerd/v2/cmd/ctr/commands"
+	"github.com/containerd/containerd/v2/core/images"
+	"github.com/containerd/containerd/v2/pkg/progress"
+	"github.com/containerd/errdefs"
+	"github.com/containerd/log"
+	"github.com/containerd/platforms"
+	"github.com/urfave/cli/v2"
 )
 
 // Command is the cli command for managing images
-var Command = cli.Command{
+var Command = &cli.Command{
 	Name:    "images",
 	Aliases: []string{"image", "i"},
 	Usage:   "manage images",
 	Subcommands: cli.Commands{
-		checkCommand,
-		exportCommand,
-		importCommand,
-		listCommand,
-		mountCommand,
-		unmountCommand,
-		pullCommand,
-		pushCommand,
-		removeCommand,
-		tagCommand,
-		setLabelsCommand,
-		convertCommand,
-		encryptCommand,
-		decryptCommand,
-		layerinfoCommand,
+		&checkCommand,
+		&exportCommand,
+		&importCommand,
+		&listCommand,
+		&mountCommand,
+		&unmountCommand,
+		&pullCommand,
+		&pushCommand,
+		&removeCommand,
+		&tagCommand,
+		&setLabelsCommand,
+		&convertCommand,
+		&encryptCommand,
+		&decryptCommand,
+		&layerinfoCommand,
 	},
 }
 
@@ -64,14 +64,15 @@ var listCommand = cli.Command{
 	ArgsUsage:   "[flags] [<filter>, ...]",
 	Description: "list images registered with containerd",
 	Flags: []cli.Flag{
-		cli.BoolFlag{
-			Name:  "quiet, q",
-			Usage: "print only the image refs",
+		&cli.BoolFlag{
+			Name:    "quiet",
+			Aliases: []string{"q"},
+			Usage:   "print only the image refs",
 		},
 	},
 	Action: func(context *cli.Context) error {
 		var (
-			filters = context.Args()
+			filters = context.Args().Slice()
 			quiet   = context.Bool("quiet")
 		)
 		client, ctx, cancel, err := commands.NewClient(context)
@@ -147,9 +148,10 @@ var setLabelsCommand = cli.Command{
 	ArgsUsage:   "[flags] <name> [<key>=<value>, ...]",
 	Description: "set and clear labels for an image",
 	Flags: []cli.Flag{
-		cli.BoolFlag{
-			Name:  "replace-all, r",
-			Usage: "replace all labels",
+		&cli.BoolFlag{
+			Name:    "replace-all",
+			Aliases: []string{"r"},
+			Usage:   "replace all labels",
 		},
 	},
 	Action: func(context *cli.Context) error {
@@ -206,9 +208,10 @@ var checkCommand = cli.Command{
 	ArgsUsage:   "[flags] [<filter>, ...]",
 	Description: "check existing images to ensure all content is available locally",
 	Flags: append([]cli.Flag{
-		cli.BoolFlag{
-			Name:  "quiet, q",
-			Usage: "print only the ready image refs (fully downloaded and unpacked)",
+		&cli.BoolFlag{
+			Name:    "quiet",
+			Aliases: []string{"q"},
+			Usage:   "print only the ready image refs (fully downloaded and unpacked)",
 		},
 	}, commands.SnapshotterFlags...),
 	Action: func(context *cli.Context) error {
@@ -224,7 +227,7 @@ var checkCommand = cli.Command{
 
 		var contentStore = client.ContentStore()
 
-		args := []string(context.Args())
+		args := context.Args().Slice()
 		imageList, err := client.ListImages(ctx, args...)
 		if err != nil {
 			return fmt.Errorf("failed listing images: %w", err)
@@ -320,7 +323,7 @@ var removeCommand = cli.Command{
 	ArgsUsage:   "[flags] <ref> [<ref>, ...]",
 	Description: "remove one or more images by reference",
 	Flags: []cli.Flag{
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name:  "sync",
 			Usage: "Synchronously remove image and all associated resources",
 		},
@@ -335,7 +338,7 @@ var removeCommand = cli.Command{
 			exitErr    error
 			imageStore = client.ImageService()
 		)
-		for i, target := range context.Args() {
+		for i, target := range context.Args().Slice() {
 			var opts []images.DeleteOpt
 			if context.Bool("sync") && i == context.NArg()-1 {
 				opts = append(opts, images.SynchronousDelete())

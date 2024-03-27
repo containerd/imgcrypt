@@ -20,13 +20,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/containerd/containerd/cmd/ctr/commands"
+	"github.com/containerd/containerd/v2/cmd/ctr/commands"
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/flags"
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/img"
 	imgenc "github.com/containerd/imgcrypt/images/encryption"
 	"github.com/containerd/imgcrypt/images/encryption/parsehelpers"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 var decryptCommand = cli.Command{
@@ -47,10 +47,10 @@ var decryptCommand = cli.Command{
 	- <filename>:fd=<file descriptor>
 	- <filename>:filename=<password file>
 `,
-	Flags: append(append(commands.RegistryFlags, cli.IntSliceFlag{
+	Flags: append(append(commands.RegistryFlags, &cli.IntSliceFlag{
 		Name:  "layer",
 		Usage: "The layer to decrypt; this must be either the layer number or a negative number starting with -1 for topmost layer",
-	}, cli.StringSliceFlag{
+	}, &cli.StringSliceFlag{
 		Name:  "platform",
 		Usage: "For which platform to decrypt; by default decryption is done for all platforms",
 	},

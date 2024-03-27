@@ -22,11 +22,11 @@ import (
 	"io"
 	"os"
 
-	"github.com/containerd/containerd/cmd/ctr/commands"
-	"github.com/containerd/containerd/images/archive"
-	"github.com/containerd/containerd/platforms"
+	"github.com/containerd/containerd/v2/cmd/ctr/commands"
+	"github.com/containerd/containerd/v2/core/images/archive"
+	"github.com/containerd/platforms"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 var exportCommand = cli.Command{
@@ -41,20 +41,20 @@ Use '--platform' to define the output platform.
 When '--all-platforms' is given all images in a manifest list must be available.
 `,
 	Flags: []cli.Flag{
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name:  "skip-manifest-json",
 			Usage: "do not add Docker compatible manifest.json to archive",
 		},
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name:  "skip-non-distributable",
 			Usage: "do not add non-distributable blobs such as Windows layers to archive",
 		},
-		cli.StringSliceFlag{
+		&cli.StringSliceFlag{
 			Name:  "platform",
 			Usage: "Pull content from a specific platform",
 			Value: &cli.StringSlice{},
 		},
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name:  "all-platforms",
 			Usage: "exports content from all platforms",
 		},
