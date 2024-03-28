@@ -14,29 +14,31 @@
    limitations under the License.
 */
 
-package encryption
+package tasks
 
 import (
-	"testing"
-
-	"github.com/gogo/protobuf/types"
+	"github.com/containerd/containerd/cmd/ctr/commands"
+	"github.com/urfave/cli"
 )
 
-func TestFromAny(t *testing.T) {
-	pbany := &types.Any{}
-
-	var testcases = []struct {
-		input    pbAny
-		expected *types.Any
-	}{
-		{input: nil, expected: nil},
-		{input: pbany, expected: pbany},
-	}
-
-	for _, tc := range testcases {
-		actual := fromAny(tc.input)
-		if actual != tc.expected {
-			t.Fatalf("expected %v, but got %v", tc.expected, actual)
+var resumeCommand = cli.Command{
+	Name:      "resume",
+	Usage:     "Resume a paused container",
+	ArgsUsage: "CONTAINER",
+	Action: func(context *cli.Context) error {
+		client, ctx, cancel, err := commands.NewClient(context)
+		if err != nil {
+			return err
 		}
-	}
+		defer cancel()
+		container, err := client.LoadContainer(ctx, context.Args().First())
+		if err != nil {
+			return err
+		}
+		task, err := container.Task(ctx, nil)
+		if err != nil {
+			return err
+		}
+		return task.Resume(ctx)
+	},
 }

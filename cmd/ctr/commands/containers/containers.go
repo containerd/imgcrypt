@@ -31,7 +31,7 @@ import (
 	"github.com/containerd/containerd/log"
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/flags"
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/run"
-	"github.com/containerd/typeurl"
+	"github.com/containerd/typeurl/v2"
 	"github.com/urfave/cli"
 )
 
@@ -281,7 +281,7 @@ var infoCommand = cli.Command{
 			return nil
 		}
 
-		if info.Spec != nil && info.Spec.Value != nil {
+		if info.Spec != nil && info.Spec.GetValue() != nil {
 			v, err := typeurl.UnmarshalAny(info.Spec)
 			if err != nil {
 				return err

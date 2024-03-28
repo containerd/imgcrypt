@@ -28,6 +28,7 @@ import (
 	"github.com/containerd/containerd/platforms"
 	"github.com/containerd/imgcrypt"
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/flags"
+	"github.com/containerd/imgcrypt/cmd/ctr/v2v1glue"
 	"github.com/containerd/imgcrypt/images/encryption"
 	"github.com/containerd/imgcrypt/images/encryption/parsehelpers"
 
@@ -133,13 +134,13 @@ command. As part of this process, we do the following:
 		ltdd := imgcrypt.Payload{
 			DecryptConfig: *cc.DecryptConfig,
 		}
-		opts := encryption.WithUnpackConfigApplyOpts(encryption.WithDecryptedUnpack(&ltdd))
+		opts := v2v1glue.UnpackOpts(encryption.WithUnpackConfigApplyOpts(encryption.WithDecryptedUnpack(&ltdd)))
 
 		start := time.Now()
 		for _, platform := range p {
 			fmt.Printf("unpacking %s %s...\n", platforms.Format(platform), img.Target.Digest)
 			i := containerd.NewImageWithPlatform(client, img, platforms.Only(platform))
-			err = i.Unpack(ctx, context.String("snapshotter"), opts)
+			err = i.Unpack(ctx, context.String("snapshotter"), opts...)
 			if err != nil {
 				return err
 			}

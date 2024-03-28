@@ -25,6 +25,7 @@ import (
 	"github.com/containerd/containerd/images"
 	"github.com/containerd/containerd/platforms"
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/img"
+	"github.com/containerd/imgcrypt/cmd/ctr/v1v2glue"
 	imgenc "github.com/containerd/imgcrypt/images/encryption"
 	"github.com/containerd/imgcrypt/images/encryption/parsehelpers"
 	encconfig "github.com/containers/ocicrypt/config"
@@ -126,10 +127,12 @@ func cryptImage(client *containerd.Client, ctx gocontext.Context, name, newName 
 	}
 	defer done(ctx)
 
+	contentStore := &v1v2glue.ContentStore{Store: client.ContentStore()}
+
 	if encrypt {
-		newSpec, modified, err = imgenc.EncryptImage(ctx, client.ContentStore(), image.Target, cc, lf)
+		newSpec, modified, err = imgenc.EncryptImage(ctx, contentStore, image.Target, cc, lf)
 	} else {
-		newSpec, modified, err = imgenc.DecryptImage(ctx, client.ContentStore(), image.Target, cc, lf)
+		newSpec, modified, err = imgenc.DecryptImage(ctx, contentStore, image.Target, cc, lf)
 	}
 	if err != nil {
 		return image, err

@@ -14,29 +14,31 @@
    limitations under the License.
 */
 
-package encryption
+package tasks
 
-import "github.com/gogo/protobuf/types"
+import (
+	"github.com/containerd/containerd/cmd/ctr/commands"
+	"github.com/urfave/cli"
+)
 
-// pbAny takes proto-generated Any type.
-// https://developers.google.com/protocol-buffers/docs/proto3#any
-type pbAny interface {
-	GetTypeUrl() string
-	GetValue() []byte
-}
-
-func fromAny(from pbAny) *types.Any {
-	if from == nil {
-		return nil
-	}
-
-	pbany, ok := from.(*types.Any)
-	if ok {
-		return pbany
-	}
-
-	return &types.Any{
-		TypeUrl: from.GetTypeUrl(),
-		Value:   from.GetValue(),
-	}
+var pauseCommand = cli.Command{
+	Name:      "pause",
+	Usage:     "Pause an existing container",
+	ArgsUsage: "CONTAINER",
+	Action: func(context *cli.Context) error {
+		client, ctx, cancel, err := commands.NewClient(context)
+		if err != nil {
+			return err
+		}
+		defer cancel()
+		container, err := client.LoadContainer(ctx, context.Args().First())
+		if err != nil {
+			return err
+		}
+		task, err := container.Task(ctx, nil)
+		if err != nil {
+			return err
+		}
+		return task.Pause(ctx)
+	},
 }

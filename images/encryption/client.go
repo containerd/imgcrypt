@@ -20,12 +20,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/containerd/containerd"
-	"github.com/containerd/containerd/containers"
-	"github.com/containerd/containerd/diff"
-	"github.com/containerd/containerd/errdefs"
+	containerd "github.com/containerd/containerd/v2/client"
+	"github.com/containerd/containerd/v2/core/containers"
+	"github.com/containerd/containerd/v2/core/diff"
+	"github.com/containerd/errdefs"
 	"github.com/containerd/imgcrypt"
-	"github.com/containerd/typeurl"
+	"github.com/containerd/typeurl/v2"
 
 	encconfig "github.com/containers/ocicrypt/config"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -40,8 +40,11 @@ func WithDecryptedUnpack(data *imgcrypt.Payload) diff.ApplyOpt {
 			return fmt.Errorf("failed to marshal payload: %w", err)
 		}
 
+		if c.ProcessorPayloads == nil {
+			c.ProcessorPayloads = make(map[string]typeurl.Any, len(imgcrypt.PayloadToolIDs))
+		}
 		for _, id := range imgcrypt.PayloadToolIDs {
-			setProcessorPayload(c, id, anything)
+			c.ProcessorPayloads[id] = anything
 		}
 		return nil
 	}

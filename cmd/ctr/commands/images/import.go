@@ -29,6 +29,7 @@ import (
 	"github.com/containerd/containerd/platforms"
 	"github.com/containerd/imgcrypt"
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/flags"
+	"github.com/containerd/imgcrypt/cmd/ctr/v2v1glue"
 	"github.com/containerd/imgcrypt/images/encryption"
 	"github.com/containerd/imgcrypt/images/encryption/parsehelpers"
 	"github.com/urfave/cli"
@@ -173,7 +174,7 @@ decrypting the image later on.
 			ltdd := imgcrypt.Payload{
 				DecryptConfig: *cc.DecryptConfig,
 			}
-			opts := encryption.WithUnpackConfigApplyOpts(encryption.WithDecryptedUnpack(&ltdd))
+			opts := v2v1glue.UnpackOpts(encryption.WithUnpackConfigApplyOpts(encryption.WithDecryptedUnpack(&ltdd)))
 			log.G(ctx).Debugf("unpacking %d images", len(imgs))
 
 			for _, img := range imgs {
@@ -184,7 +185,7 @@ decrypting the image later on.
 
 				// TODO: Show unpack status
 				fmt.Printf("unpacking %s (%s)...", img.Name, img.Target.Digest)
-				err = image.Unpack(ctx, context.String("snapshotter"), opts)
+				err = image.Unpack(ctx, context.String("snapshotter"), opts...)
 				if err != nil {
 					return err
 				}

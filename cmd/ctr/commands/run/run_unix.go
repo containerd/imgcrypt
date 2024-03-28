@@ -20,6 +20,7 @@
 package run
 
 import (
+	"context"
 	gocontext "context"
 	"errors"
 	"fmt"
@@ -38,11 +39,15 @@ import (
 	"github.com/containerd/containerd/platforms"
 	"github.com/containerd/containerd/runtime/v2/runc/options"
 	"github.com/containerd/containerd/snapshots"
+	"github.com/containerd/errdefs"
 	"github.com/containerd/imgcrypt"
 	"github.com/containerd/imgcrypt/cmd/ctr/commands"
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/images"
+	"github.com/containerd/imgcrypt/cmd/ctr/v1v2glue"
+	"github.com/containerd/imgcrypt/cmd/ctr/v2v1glue"
 	"github.com/containerd/imgcrypt/images/encryption"
 	"github.com/containerd/imgcrypt/images/encryption/parsehelpers"
+	encconfig "github.com/containers/ocicrypt/config"
 
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/sirupsen/logrus"
@@ -157,8 +162,8 @@ func NewContainer(ctx gocontext.Context, client *containerd.Client, context *cli
 				ltdd := imgcrypt.Payload{
 					DecryptConfig: *cc.DecryptConfig,
 				}
-				opts := encryption.WithUnpackConfigApplyOpts(encryption.WithDecryptedUnpack(&ltdd))
-				if err := image.Unpack(ctx, snapshotter, opts); err != nil {
+				opts := v2v1glue.UnpackOpts(encryption.WithUnpackConfigApplyOpts(encryption.WithDecryptedUnpack(&ltdd)))
+				if err := image.Unpack(ctx, snapshotter, opts...); err != nil {
 					return nil, err
 				}
 			}
@@ -369,12 +374,26 @@ func NewContainer(ctx gocontext.Context, client *containerd.Client, context *cli
 	}
 
 	if !context.IsSet("skip-decrypt-auth") {
-		cOpts = append(cOpts, encryption.WithAuthorizationCheck(cc.DecryptConfig))
+		cOpts = append(cOpts, withAuthorizationCheck(cc.DecryptConfig))
 	}
 
 	// oci.WithImageConfig (WithUsername, WithUserID) depends on access to rootfs for resolving via
 	// the /etc/{passwd,group} files. So cOpts needs to have precedence over opts.
 	return client.NewContainer(ctx, id, cOpts...)
+}
+
+func withAuthorizationCheck(dc *encconfig.DecryptConfig) containerd.NewContainerOpts {
+	return func(ctx context.Context, client *containerd.Client, c *containers.Container) error {
+		image, err := client.ImageService().Get(ctx, c.Image)
+		if errdefs.IsNotFound(err) {
+			// allow creation of container without a existing image
+			return nil
+		} else if err != nil {
+			return err
+		}
+
+		return encryption.CheckAuthorization(ctx, &v1v2glue.ContentStore{Store: client.ContentStore()}, image.Target, dc)
+	}
 }
 
 func getRuncOptions(context *cli.Context) (*options.Options, error) {
