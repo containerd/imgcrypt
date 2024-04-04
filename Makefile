@@ -34,10 +34,10 @@ build: $(BINARIES)
 FORCE:
 
 bin/ctd-decoder: cmd/ctd-decoder FORCE
-	go build -o $@ -v ./cmd/ctd-decoder/
+	cd cmd && go build -o ../$@ -v ./ctd-decoder/
 
 bin/ctr-enc: cmd/ctr FORCE
-	go build -o $@ ${CTR_LDFLAGS} -v ./cmd/ctr/
+	cd cmd && go build -o ../$@ ${CTR_LDFLAGS} -v ./ctr/
 
 check:
 	@echo "$@"
