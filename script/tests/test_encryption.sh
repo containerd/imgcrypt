@@ -193,14 +193,14 @@ pullImages() {
 		echo "Note: Image pull credentials can be passed with env. variable IMAGE_PULL_CREDS=<username>:<password>"
 	fi
 	$CTR images rm --sync ${ALPINE_ENC} ${ALPINE_DEC} ${NGINX_ENC} ${NGINX_DEC} ${BASH_ENC} &>/dev/null
-	$CTR images pull ${IMAGE_PULL_CREDS:+--user ${IMAGE_PULL_CREDS}} --all-platforms ${ALPINE}
+	$CTR content fetch ${IMAGE_PULL_CREDS:+--user ${IMAGE_PULL_CREDS}} --all-platforms ${ALPINE}
 	failExit $? "Image pull failed on ${ALPINE}"
 
 	$CTR images pull ${IMAGE_PULL_CREDS:+--user ${IMAGE_PULL_CREDS}} --platform linux/amd64 ${NGINX} &>/dev/null
 	failExit $? "Image pull failed on ${NGINX}"
 
 	# pull bash only for local platform
-	$CTR images pull ${IMAGE_PULL_CREDS:+--user ${IMAGE_PULL_CREDS}} ${BASH} &>/dev/null
+	$CTR content fetch ${IMAGE_PULL_CREDS:+--user ${IMAGE_PULL_CREDS}} --all-platforms ${BASH} &>/dev/null
 	failExit $? "Image pull failed on ${BASH}"
 
 	LAYER_INFO_ALPINE="$($CTR images layerinfo ${ALPINE})"
@@ -1374,7 +1374,7 @@ testKeyprovider() {
 
 	echo "Testing keyprovider using '${KEYPROVIDER}'"
 
-	echo "Testing large recpient list"
+	echo "Testing single recipient list"
 
 	$CTR images encrypt \
 		--recipient provider:testkeyprovider:foobar \
@@ -1391,7 +1391,7 @@ testKeyprovider() {
 		<(echo -n "ENCRYPTIONprovider.testkeyprovider")
 	failExit $? "Image layerinfo on keyprovider encrypted image shows unexpected encryption"
 
-	MSG=$(sudo $CTR container create ${ALPINE_ENC} --skip-decrypt-auth --key provider:testkeyprovider:xyz testcontainer1 2>&1)
+	MSG=$(sudo $CTR container create  --skip-decrypt-auth --key provider:testkeyprovider:xyz ${ALPINE_ENC} testcontainer1 2>&1)
 
 	failExit $? "Should have been able to create a container from encrypted (keyprovider)\n${MSG}"
 
