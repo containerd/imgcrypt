@@ -23,11 +23,11 @@ import (
 
 	"github.com/containerd/imgcrypt"
 	"github.com/containerd/imgcrypt/images/encryption"
-	"github.com/containerd/typeurl"
+	"github.com/containerd/typeurl/v2"
 
-	"github.com/gogo/protobuf/proto"
-	"github.com/gogo/protobuf/types"
-	"github.com/urfave/cli"
+	"github.com/containerd/containerd/v2/pkg/protobuf/proto"
+	"github.com/containerd/containerd/v2/pkg/protobuf/types"
+	"github.com/urfave/cli/v2"
 )
 
 var (
@@ -40,7 +40,7 @@ func main() {
 	app.Usage = Usage
 	app.Action = run
 	app.Flags = []cli.Flag{
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "decryption-keys-path",
 			Usage: "Path to load decryption keys from. (optional)",
 		},
@@ -69,8 +69,8 @@ func decrypt(ctx *cli.Context) error {
 	decCc := &payload.DecryptConfig
 
 	// TODO: If decryption key path is set, get additional keys to augment payload keys
-	if ctx.GlobalIsSet("decryption-keys-path") {
-		keyPathCc, err := getDecryptionKeys(ctx.GlobalString("decryption-keys-path"))
+	if ctx.IsSet("decryption-keys-path") {
+		keyPathCc, err := getDecryptionKeys(ctx.String("decryption-keys-path"))
 		if err != nil {
 			return fmt.Errorf("unable to get decryption keys in provided key path: %w", err)
 		}

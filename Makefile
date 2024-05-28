@@ -18,7 +18,7 @@ DESTDIR ?= /usr/local
 
 VERSION=$(shell git describe --match 'v[0-9]*' --dirty='.m' --always)
 
-CTR_LDFLAGS=-ldflags '-X github.com/containerd/containerd/version.Version=$(VERSION)'
+CTR_LDFLAGS=-ldflags '-X github.com/containerd/containerd/v2/version.Version=$(VERSION)'
 COMMANDS=ctd-decoder ctr-enc
 RELEASE_COMMANDS=ctd-decoder
 

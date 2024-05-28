@@ -28,58 +28,47 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/containerd/containerd"
-	"github.com/containerd/containerd/containers"
-	"github.com/containerd/containerd/contrib/apparmor"
-	"github.com/containerd/containerd/contrib/nvidia"
-	"github.com/containerd/containerd/contrib/seccomp"
-	"github.com/containerd/containerd/oci"
-	runtimeoptions "github.com/containerd/containerd/pkg/runtimeoptions/v1"
-	"github.com/containerd/containerd/platforms"
-	"github.com/containerd/containerd/runtime/v2/runc/options"
-	"github.com/containerd/containerd/snapshots"
+	"github.com/containerd/containerd/api/types/runc/options"
+	runtimeoptions "github.com/containerd/containerd/api/types/runtimeoptions/v1"
+	containerd "github.com/containerd/containerd/v2/client"
+	"github.com/containerd/containerd/v2/contrib/apparmor"
+	"github.com/containerd/containerd/v2/contrib/nvidia"
+	"github.com/containerd/containerd/v2/contrib/seccomp"
+	"github.com/containerd/containerd/v2/core/containers"
+	"github.com/containerd/containerd/v2/core/snapshots"
+	"github.com/containerd/containerd/v2/pkg/oci"
 	"github.com/containerd/imgcrypt"
-	"github.com/containerd/imgcrypt/cmd/ctr/commands"
-	"github.com/containerd/imgcrypt/cmd/ctr/commands/images"
 	"github.com/containerd/imgcrypt/images/encryption"
 	"github.com/containerd/imgcrypt/images/encryption/parsehelpers"
+	"github.com/containerd/platforms"
+
+	"github.com/containerd/imgcrypt/cmd/ctr/commands"
+	"github.com/containerd/imgcrypt/cmd/ctr/commands/images"
 
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 var platformRunFlags = []cli.Flag{
-	cli.StringFlag{
-		Name:  "runc-binary",
-		Usage: "specify runc-compatible binary",
-	},
-	cli.StringFlag{
-		Name:  "runc-root",
-		Usage: "specify runc-compatible root",
-	},
-	cli.BoolFlag{
-		Name:  "runc-systemd-cgroup",
-		Usage: "start runc with systemd cgroup manager",
-	},
-	cli.StringFlag{
+	&cli.StringFlag{
 		Name:  "uidmap",
 		Usage: "run inside a user namespace with the specified UID mapping range; specified with the format `container-uid:host-uid:length`",
 	},
-	cli.StringFlag{
+	&cli.StringFlag{
 		Name:  "gidmap",
 		Usage: "run inside a user namespace with the specified GID mapping range; specified with the format `container-gid:host-gid:length`",
 	},
-	cli.BoolFlag{
+	&cli.BoolFlag{
 		Name:  "remap-labels",
 		Usage: "provide the user namespace ID remapping to the snapshotter via label options; requires snapshotter support",
 	},
-	cli.Float64Flag{
+	&cli.Float64Flag{
 		Name:  "cpus",
 		Usage: "set the CFS cpu quota",
 		Value: 0.0,
 	},
-	cli.IntFlag{
+	&cli.IntFlag{
 		Name:  "cpu-shares",
 		Usage: "set the cpu shares",
 		Value: 1024,
@@ -111,7 +100,7 @@ func NewContainer(ctx gocontext.Context, client *containerd.Client, context *cli
 		var (
 			ref = context.Args().First()
 			//for container's id is Args[1]
-			args = context.Args()[2:]
+			args = context.Args().Slice()[2:]
 		)
 		opts = append(opts, oci.WithDefaultSpec(), oci.WithDefaultUnixDevices)
 		if ef := context.String("env-file"); ef != "" {

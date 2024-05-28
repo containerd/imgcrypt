@@ -25,19 +25,19 @@ import (
 	"strings"
 
 	"github.com/containerd/console"
-	"github.com/containerd/containerd"
-	"github.com/containerd/containerd/cio"
-	"github.com/containerd/containerd/cmd/ctr/commands"
-	"github.com/containerd/containerd/cmd/ctr/commands/tasks"
-	"github.com/containerd/containerd/containers"
-	clabels "github.com/containerd/containerd/labels"
-	"github.com/containerd/containerd/namespaces"
-	"github.com/containerd/containerd/oci"
+	containerd "github.com/containerd/containerd/v2/client"
+	"github.com/containerd/containerd/v2/cmd/ctr/commands"
+	"github.com/containerd/containerd/v2/cmd/ctr/commands/tasks"
+	"github.com/containerd/containerd/v2/core/containers"
+	"github.com/containerd/containerd/v2/pkg/cio"
+	clabels "github.com/containerd/containerd/v2/pkg/labels"
+	"github.com/containerd/containerd/v2/pkg/namespaces"
+	"github.com/containerd/containerd/v2/pkg/oci"
 	gocni "github.com/containerd/go-cni"
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/flags"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 func withMounts(context *cli.Context) oci.SpecOpts {
@@ -90,47 +90,48 @@ func parseMountFlag(m string) (specs.Mount, error) {
 }
 
 // Command runs a container
-var Command = cli.Command{
-	Name:           "run",
-	Usage:          "run a container",
-	ArgsUsage:      "[flags] Image|RootFS ID [COMMAND] [ARG...]",
-	SkipArgReorder: true,
+var Command = &cli.Command{
+	Name:      "run",
+	Usage:     "run a container",
+	ArgsUsage: "[flags] Image|RootFS ID [COMMAND] [ARG...]",
 	Flags: append([]cli.Flag{
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name:  "rm",
 			Usage: "remove the container after running, cannot be used with --detach",
 		},
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name:  "null-io",
 			Usage: "send all IO to /dev/null",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "log-uri",
 			Usage: "log uri",
 		},
-		cli.BoolFlag{
-			Name:  "detach,d",
-			Usage: "detach from the task after it has started execution, cannot be used with --rm",
+		&cli.BoolFlag{
+			Name:    "detach",
+			Aliases: []string{"d"},
+			Usage:   "detach from the task after it has started execution, cannot be used with --rm",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "fifo-dir",
 			Usage: "directory used for storing IO FIFOs",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "cgroup",
 			Usage: "cgroup path (To disable use of cgroup, set to \"\" explicitly)",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "platform",
 			Usage: "run image for specific platform",
 		},
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name:  "cni",
 			Usage: "enable cni networking for the container",
 		},
 	}, append(platformRunFlags,
-		append(append(append(commands.SnapshotterFlags, []cli.Flag{commands.SnapshotterLabels}...),
-			commands.ContainerFlags...), flags.ImageDecryptionFlags...)...)...),
+		append(commands.RuntimeFlags,
+			append(append(append(commands.SnapshotterFlags, []cli.Flag{commands.SnapshotterLabels}...),
+				commands.ContainerFlags...), flags.ImageDecryptionFlags...)...)...)...),
 	Action: func(context *cli.Context) error {
 		var (
 			err error
