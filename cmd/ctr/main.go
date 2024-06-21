@@ -20,23 +20,17 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/containerd/containerd/v2/pkg/seed" //nolint:staticcheck // Global math/rand seed is deprecated, but still used by external dependencies
 	"github.com/containerd/imgcrypt/cmd/ctr/app"
 	"github.com/urfave/cli/v2"
 )
 
 var pluginCmds = []*cli.Command{}
 
-func init() {
-	//nolint:staticcheck // Global math/rand seed is deprecated, but still used by external dependencies
-	seed.WithTimeAndRand()
-}
-
 func main() {
-	app := app.New()
-	app.Commands = append(app.Commands, pluginCmds...)
-	if err := app.Run(os.Args); err != nil {
-		fmt.Fprintf(os.Stderr, "ctr: %s\n", err)
+	application := app.New()
+	application.Commands = append(application.Commands, pluginCmds...)
+	if err := application.Run(os.Args); err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "ctr: %s\n", err)
 		os.Exit(1)
 	}
 }
