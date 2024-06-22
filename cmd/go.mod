@@ -6,15 +6,15 @@ toolchain go1.22.3
 
 require (
 	github.com/Microsoft/go-winio v0.6.2
-	github.com/Microsoft/hcsshim v0.12.3
+	github.com/Microsoft/hcsshim v0.12.4
 	github.com/containerd/console v1.0.4
-	github.com/containerd/containerd/api v1.8.0-rc.0
-	github.com/containerd/containerd/v2 v2.0.0-rc.2
+	github.com/containerd/containerd/api v1.8.0-rc.2
+	github.com/containerd/containerd/v2 v2.0.0-rc.3
 	github.com/containerd/errdefs v0.1.0
 	github.com/containerd/go-cni v1.1.9
-	github.com/containerd/imgcrypt v1.1.7
+	github.com/containerd/imgcrypt v1.1.12-0.20240528203804-3ca09a2db5cd
 	github.com/containerd/log v0.1.0
-	github.com/containerd/platforms v0.2.0
+	github.com/containerd/platforms v0.2.1
 	github.com/containerd/typeurl/v2 v2.1.1
 	github.com/containers/ocicrypt v1.1.10
 	github.com/opencontainers/go-digest v1.0.0
@@ -36,7 +36,7 @@ require (
 	github.com/containerd/fifo v1.1.0 // indirect
 	github.com/containerd/go-runc v1.1.0 // indirect
 	github.com/containerd/plugin v0.1.0 // indirect
-	github.com/containerd/ttrpc v1.2.4 // indirect
+	github.com/containerd/ttrpc v1.2.5 // indirect
 	github.com/containernetworking/cni v1.2.0 // indirect
 	github.com/containernetworking/plugins v1.4.1 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
@@ -77,13 +77,13 @@ require (
 	go.opentelemetry.io/otel v1.26.0 // indirect
 	go.opentelemetry.io/otel/metric v1.26.0 // indirect
 	go.opentelemetry.io/otel/trace v1.26.0 // indirect
-	golang.org/x/crypto v0.22.0 // indirect
+	golang.org/x/crypto v0.23.0 // indirect
 	golang.org/x/exp v0.0.0-20231214170342-aacd6d4b4611 // indirect
-	golang.org/x/mod v0.17.0 // indirect
-	golang.org/x/net v0.24.0 // indirect
-	golang.org/x/sys v0.20.0 // indirect
-	golang.org/x/term v0.19.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/mod v0.18.0 // indirect
+	golang.org/x/net v0.25.0 // indirect
+	golang.org/x/sys v0.21.0 // indirect
+	golang.org/x/term v0.20.0 // indirect
+	golang.org/x/text v0.15.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240415180920-8c6c420018be // indirect
 	google.golang.org/protobuf v1.34.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
