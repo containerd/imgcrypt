@@ -1,4 +1,4 @@
-module github.com/containerd/imgcrypt
+module github.com/containerd/imgcrypt/v2
 
 go 1.22.0
 

@@ -37,10 +37,11 @@ import (
 	"github.com/containerd/containerd/v2/core/containers"
 	"github.com/containerd/containerd/v2/core/snapshots"
 	"github.com/containerd/containerd/v2/pkg/oci"
-	"github.com/containerd/imgcrypt"
-	"github.com/containerd/imgcrypt/images/encryption"
-	"github.com/containerd/imgcrypt/images/encryption/parsehelpers"
 	"github.com/containerd/platforms"
+
+	"github.com/containerd/imgcrypt/v2"
+	"github.com/containerd/imgcrypt/v2/images/encryption"
+	"github.com/containerd/imgcrypt/v2/images/encryption/parsehelpers"
 
 	"github.com/containerd/imgcrypt/cmd/ctr/commands"
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/images"

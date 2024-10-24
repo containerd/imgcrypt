@@ -23,8 +23,9 @@ import (
 	"github.com/containerd/containerd/v2/cmd/ctr/commands"
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/flags"
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/img"
-	imgenc "github.com/containerd/imgcrypt/images/encryption"
-	"github.com/containerd/imgcrypt/images/encryption/parsehelpers"
+
+	imgenc "github.com/containerd/imgcrypt/v2/images/encryption"
+	"github.com/containerd/imgcrypt/v2/images/encryption/parsehelpers"
 
 	"github.com/urfave/cli/v2"
 )

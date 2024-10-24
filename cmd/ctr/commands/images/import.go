@@ -25,13 +25,14 @@ import (
 	containerd "github.com/containerd/containerd/v2/client"
 	"github.com/containerd/containerd/v2/cmd/ctr/commands"
 	"github.com/containerd/containerd/v2/core/images/archive"
-	"github.com/containerd/imgcrypt"
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/flags"
-	"github.com/containerd/imgcrypt/images/encryption"
-	"github.com/containerd/imgcrypt/images/encryption/parsehelpers"
 	"github.com/containerd/log"
 	"github.com/containerd/platforms"
 	"github.com/urfave/cli/v2"
+
+	"github.com/containerd/imgcrypt/v2"
+	"github.com/containerd/imgcrypt/v2/images/encryption"
+	"github.com/containerd/imgcrypt/v2/images/encryption/parsehelpers"
 )
 
 var importCommand = cli.Command{
