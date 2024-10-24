@@ -10,7 +10,7 @@ require (
 	github.com/containerd/containerd/v2 v2.0.0-rc.6
 	github.com/containerd/errdefs v0.3.0
 	github.com/containerd/go-cni v1.1.10
-	github.com/containerd/imgcrypt v1.2.0-rc1
+	github.com/containerd/imgcrypt/v2 v2.0.0
 	github.com/containerd/log v0.1.0
 	github.com/containerd/platforms v0.2.1
 	github.com/containerd/typeurl/v2 v2.2.0
@@ -92,4 +92,4 @@ require (
 	tags.cncf.io/container-device-interface/specs-go v0.8.0 // indirect
 )
 
-replace github.com/containerd/imgcrypt => ../
+replace github.com/containerd/imgcrypt/v2 => ../
