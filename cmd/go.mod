@@ -4,16 +4,16 @@ go 1.22.0
 
 require (
 	github.com/Microsoft/go-winio v0.6.2
-	github.com/Microsoft/hcsshim v0.12.8
+	github.com/Microsoft/hcsshim v0.12.9
 	github.com/containerd/console v1.0.4
-	github.com/containerd/containerd/api v1.8.0-rc.4
-	github.com/containerd/containerd/v2 v2.0.0-rc.6
-	github.com/containerd/errdefs v0.3.0
+	github.com/containerd/containerd/api v1.8.0
+	github.com/containerd/containerd/v2 v2.0.0
+	github.com/containerd/errdefs v1.0.0
 	github.com/containerd/go-cni v1.1.10
 	github.com/containerd/imgcrypt/v2 v2.0.0
 	github.com/containerd/log v0.1.0
-	github.com/containerd/platforms v0.2.1
-	github.com/containerd/typeurl/v2 v2.2.0
+	github.com/containerd/platforms v1.0.0-rc.0
+	github.com/containerd/typeurl/v2 v2.2.2
 	github.com/containers/ocicrypt v1.2.0
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.0
@@ -29,13 +29,12 @@ require (
 	github.com/AdamKorcz/go-118-fuzz-build v0.0.0-20231105174938-2b5cbb29f3e2 // indirect
 	github.com/cilium/ebpf v0.11.0 // indirect
 	github.com/containerd/cgroups/v3 v3.0.3 // indirect
-	github.com/containerd/containerd v1.7.23 // indirect
-	github.com/containerd/continuity v0.4.3 // indirect
+	github.com/containerd/continuity v0.4.4 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
 	github.com/containerd/fifo v1.1.0 // indirect
 	github.com/containerd/go-runc v1.1.0 // indirect
-	github.com/containerd/plugin v0.1.0 // indirect
-	github.com/containerd/ttrpc v1.2.6-0.20240827082320-b5cd6e4b3287 // indirect
+	github.com/containerd/plugin v1.0.0 // indirect
+	github.com/containerd/ttrpc v1.2.6 // indirect
 	github.com/containernetworking/cni v1.2.3 // indirect
 	github.com/containernetworking/plugins v1.5.1 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
