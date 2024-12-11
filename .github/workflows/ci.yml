@@ -55,7 +55,7 @@ jobs:
 
       - uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.61.0
+          version: v1.62.2
           working-directory: src/github.com/containerd/imgcrypt
           args: --timeout 120s
 
