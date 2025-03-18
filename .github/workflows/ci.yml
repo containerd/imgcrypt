@@ -62,7 +62,7 @@ jobs:
   tests:
     strategy:
       matrix:
-        go: ["1.22", "1.23"]
+        go: ["1.24", "1.23"]
         os: [ubuntu-22.04, windows-2022]
 
     name: Tests / ${{ matrix.os }} / ${{ matrix.go }}
