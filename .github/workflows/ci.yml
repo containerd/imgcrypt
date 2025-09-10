@@ -53,9 +53,9 @@ jobs:
           echo "GOPATH=${{ github.workspace }}" >> $GITHUB_ENV
           echo "${{ github.workspace }}/bin" >> $GITHUB_PATH
 
-      - uses: golangci/golangci-lint-action@v3
+      - uses: golangci/golangci-lint-action@v8.0.0
         with:
-          version: v1.62.2
+          version: v2.4.0
           working-directory: src/github.com/containerd/imgcrypt
           args: --timeout 120s
 
