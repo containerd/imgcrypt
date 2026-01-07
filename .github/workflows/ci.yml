@@ -32,6 +32,10 @@ jobs:
       - uses: containerd/project-checks@v1.2.2
         with:
           working-directory: src/github.com/containerd/imgcrypt
+          # github.com/cyphar/filepath-securejoin: MPL-2.0 AND BSD-3-Clause
+          # Approval: https://github.com/cncf/foundation/issues/1154#issuecomment-3562385979
+          go-licenses-ignore: |
+            github.com/cyphar/filepath-securejoin
 
   linters:
     name: Linters
