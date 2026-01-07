@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/setup-go@v3
         with:
-          go-version: 1.23
+          go-version: 1.25
 
       - name: Set env
         shell: bash
@@ -62,7 +62,7 @@ jobs:
   tests:
     strategy:
       matrix:
-        go: ["1.24", "1.23"]
+        go: ["1.24", "1.25"]
         os: [ubuntu-22.04, windows-2022]
 
     name: Tests / ${{ matrix.os }} / ${{ matrix.go }}
