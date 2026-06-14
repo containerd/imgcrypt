@@ -152,7 +152,7 @@ func NewContainer(ctx gocontext.Context, client *containerd.Client, context *cli
 	}
 
 	runtime := context.String("runtime")
-	var runtimeOpts interface{}
+	var runtimeOpts any
 	if runtime == "io.containerd.runhcs.v1" {
 		runtimeOpts = &options.Options{
 			Debug: context.Bool("debug"),
