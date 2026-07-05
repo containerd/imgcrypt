@@ -210,6 +210,20 @@ pullImages() {
 	failExit $? "Image layerinfo on plain image failed"
 }
 
+remove_all_snapshots()
+{
+	local v
+
+	# to avoid caching effects of the image we just decrypted and then exported,
+	# remove all snapshots to simulate a clean system for import
+	# The following is a brute-force removal ignoring dependencies
+	while [ -n "$($CTR snapshot ls | tail -n +2)" ]; do
+		for v in $($CTR snapshot ls | tail -n +2 | cut -d" " -f1); do
+			$CTR snapshot rm $v &>/dev/null
+		done
+	done
+}
+
 setupPGP() {
 	GPGHOMEDIR=${WORKDIR}/gpg2
 
@@ -312,14 +326,9 @@ testPGP() {
 
 	# remove ${ALPINE} and ${ALPINE_ENC} to clear cached and so we need to decrypt
 	$CTR images rm --sync ${ALPINE} ${ALPINE_ENC} &>/dev/null
-	# to avoid caching effects of the image we just decrypted and then exported,
-	# remove all snapshots to simulate a clean system for import
-	# The following is a brute-force removal ignoring dependencies
-	while [ -n "$($CTR snapshot ls | tail -n +2)" ]; do
-		for v in $($CTR snapshot ls | tail -n +2 | cut -d" " -f1); do
-			$CTR snapshot rm $v &>/dev/null
-		done
-	done
+
+	remove_all_snapshots
+
 
 	$CTR images import \
 		--all-platforms \
