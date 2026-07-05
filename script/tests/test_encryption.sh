@@ -165,7 +165,7 @@ state = "${STATEDIR}"
 _EOF_
 	mkdir -p ${ROOTDIR}
 	mkdir -p ${STATEDIR}
-	sudo bash -c "${CONTAINERD} -c ${CONFIG_TOML} &>${LOGFILE} & echo \$! > ${PIDFILE}; wait" &
+	sudo bash -c "OCICRYPT_CONFIG=internal ${CONTAINERD} -c ${CONFIG_TOML} &>${LOGFILE} & echo \$! > ${PIDFILE}; wait" &
 	sleep 1
 	CONTAINERD_PID="$(cat ${PIDFILE})"
 	sudo kill -0 ${CONTAINERD_PID}
