@@ -830,6 +830,7 @@ testLocalKeys() {
 	failExit $? "Should have been able to create a container from encrypted image when local keys exists (JWE)\n${MSG}"
 	MSG=$($CTR container rm testcontainer1 2>&1)
 	MSG=$($CTR snapshot rm testcontainer1 2>&1)
+	remove_all_snapshots
 
 	rm -f ${LOCAL_KEYS_PATH}/*
 
@@ -839,13 +840,12 @@ testLocalKeys() {
 	done
 
 	echo "Testing creation of container from encrypted image with local keys (PKCS11)"
-	MSG=$($CTR container rm testcontainer1 2>&1)
-	MSG=$($CTR snapshot rm testcontainer1 2>&1)
 	MSG=$(sudo $CTR container create --skip-decrypt-auth ${ALPINE_ENC} testcontainer1 2>&1)
 
 	failExit $? "Should have been able to create a container from encrypted image when local keys exists (PKCS11)\n${MSG}"
 	MSG=$($CTR container rm testcontainer1 2>&1)
 	MSG=$($CTR snapshot rm testcontainer1 2>&1)
+	remove_all_snapshots
 
 	$CTR images rm --sync ${ALPINE_ENC} &>/dev/null
 	echo "Encryption with ${recipient1} and ${recipient2} and decrypting with local unpack keys worked"
@@ -865,6 +865,7 @@ testLocalKeys() {
 
 	MSG=$($CTR container rm testcontainer1 2>&1)
 	MSG=$($CTR snapshot rm testcontainer1 2>&1)
+	remove_all_snapshots
 
 	# Create testcontainer1 from encrypted bash image ${BASH_ENC}
 	# Creating the container without providing (right) key must fail
