@@ -3,7 +3,7 @@ module github.com/containerd/imgcrypt/v2
 go 1.25.0
 
 require (
-	github.com/containerd/containerd/v2 v2.0.9
+	github.com/containerd/containerd/v2 v2.0.10
 	github.com/containerd/errdefs v1.0.0
 	github.com/containerd/platforms v1.0.0-rc.4
 	github.com/containerd/typeurl/v2 v2.2.3
