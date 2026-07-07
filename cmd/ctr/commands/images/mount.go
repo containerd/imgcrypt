@@ -17,24 +17,29 @@
 package images
 
 import (
+	"crypto/rand"
+	"encoding/base64"
+	"errors"
 	"fmt"
 	"time"
 
-	containerd "github.com/containerd/containerd/v2/client"
-	"github.com/containerd/containerd/v2/cmd/ctr/commands"
-	"github.com/containerd/containerd/v2/core/leases"
-	"github.com/containerd/containerd/v2/core/mount"
-	"github.com/containerd/containerd/v2/defaults"
 	"github.com/containerd/errdefs"
 	"github.com/containerd/platforms"
 	"github.com/opencontainers/image-spec/identity"
 	"github.com/urfave/cli/v2"
+
+	containerd "github.com/containerd/containerd/v2/client"
+	"github.com/containerd/containerd/v2/cmd/ctr/commands"
+	"github.com/containerd/containerd/v2/core/diff"
+	"github.com/containerd/containerd/v2/core/leases"
+	"github.com/containerd/containerd/v2/core/mount"
+	"github.com/containerd/containerd/v2/defaults"
 )
 
-var mountCommand = cli.Command{
+var mountCommand = &cli.Command{
 	Name:      "mount",
-	Usage:     "mount an image to a target path",
-	ArgsUsage: "[flags] <ref> <target>",
+	Usage:     "Mount an image to a target path",
+	ArgsUsage: "[flags] <ref> [<target>]",
 	Description: `Mount an image rootfs to a specified path.
 
 When you are done, use the unmount command.
@@ -49,36 +54,50 @@ When you are done, use the unmount command.
 			Usage: "Mount the image for the specified platform",
 			Value: platforms.DefaultString(),
 		},
+		&cli.BoolFlag{
+			Name:  "sync-fs",
+			Usage: "Synchronize the underlying filesystem containing files when unpack images, false by default",
+		},
+		&cli.DurationFlag{
+			Name:    "expiration",
+			Aliases: []string{"x"},
+			Usage:   "Set the expiration time for the mount and snapshots",
+			Value:   1 * time.Hour,
+		},
 	),
-	Action: func(context *cli.Context) (retErr error) {
+	Action: func(cliContext *cli.Context) (retErr error) {
 		var (
-			ref    = context.Args().First()
-			target = context.Args().Get(1)
+			ref    = cliContext.Args().First()
+			target = cliContext.Args().Get(1)
 		)
 		if ref == "" {
-			return fmt.Errorf("please provide an image reference to mount")
-		}
-		if target == "" {
-			return fmt.Errorf("please provide a target path to mount to")
+			return errors.New("please provide an image reference to mount")
 		}
 
-		client, ctx, cancel, err := commands.NewClient(context)
+		var key string
+		if target == "" {
+			t := time.Now()
+			var b [3]byte
+			rand.Read(b[:])
+			key = fmt.Sprintf("ctr-images-mount-%d-%s", t.Nanosecond(), base64.URLEncoding.EncodeToString(b[:]))
+		} else {
+			key = target
+		}
+
+		client, ctx, cancel, err := commands.NewClient(cliContext)
 		if err != nil {
 			return err
 		}
 		defer cancel()
 
-		snapshotter := context.String("snapshotter")
+		snapshotter := cliContext.String("snapshotter")
 		if snapshotter == "" {
 			snapshotter = defaults.DefaultSnapshotter
 		}
 
 		ctx, done, err := client.WithLease(ctx,
-			leases.WithID(target),
-			leases.WithExpiration(24*time.Hour),
-			leases.WithLabels(map[string]string{
-				"containerd.io/gc.ref.snapshot." + snapshotter: target,
-			}),
+			leases.WithID(key),
+			leases.WithExpiration(cliContext.Duration("expiration")),
 		)
 		if err != nil && !errdefs.IsAlreadyExists(err) {
 			return err
@@ -90,7 +109,7 @@ When you are done, use the unmount command.
 			}
 		}()
 
-		ps := context.String("platform")
+		ps := cliContext.String("platform")
 		p, err := platforms.Parse(ps)
 		if err != nil {
 			return fmt.Errorf("unable to parse platform %s: %w", ps, err)
@@ -102,7 +121,7 @@ When you are done, use the unmount command.
 		}
 
 		i := containerd.NewImageWithPlatform(client, img, platforms.Only(p))
-		if err := i.Unpack(ctx, snapshotter); err != nil {
+		if err := i.Unpack(ctx, snapshotter, containerd.WithUnpackApplyOpts(diff.WithSyncFs(cliContext.Bool("sync-fs")))); err != nil {
 			return fmt.Errorf("error unpacking image: %w", err)
 		}
 
@@ -116,28 +135,43 @@ When you are done, use the unmount command.
 		s := client.SnapshotService(snapshotter)
 
 		var mounts []mount.Mount
-		if context.Bool("rw") {
-			mounts, err = s.Prepare(ctx, target, chainID)
+		if cliContext.Bool("rw") {
+			mounts, err = s.Prepare(ctx, key, chainID)
 		} else {
-			mounts, err = s.View(ctx, target, chainID)
+			mounts, err = s.View(ctx, key, chainID)
 		}
 		if err != nil {
 			if errdefs.IsAlreadyExists(err) {
-				mounts, err = s.Mounts(ctx, target)
+				mounts, err = s.Mounts(ctx, key)
 			}
 			if err != nil {
 				return err
 			}
 		}
 
-		if err := mount.All(mounts, target); err != nil {
-			if err := s.Remove(ctx, target); err != nil && !errdefs.IsNotFound(err) {
-				fmt.Fprintln(context.App.ErrWriter, "Error cleaning up snapshot after mount error:", err)
-			}
-			return err
+		mm := client.MountManager()
+
+		info, err := mm.Activate(ctx, key, mounts, mount.WithTemporary)
+		if err == nil {
+			mounts = info.System
+		} else if !errdefs.IsNotImplemented(err) {
+			return fmt.Errorf("activate error: %w", err)
 		}
 
-		fmt.Fprintln(context.App.Writer, target)
+		if target != "" {
+			if err := mount.All(mounts, target); err != nil {
+				if err := s.Remove(ctx, key); err != nil && !errdefs.IsNotFound(err) {
+					fmt.Fprintln(cliContext.App.ErrWriter, "Error cleaning up snapshot after mount error:", err)
+				}
+				return fmt.Errorf("failed to mount %v: %w", mounts, err)
+			}
+		} else if len(mounts) == 1 && mounts[0].Type == "bind" {
+			target = mounts[0].Source
+		} else {
+			return fmt.Errorf("cannot handle returned mounts: %v", mounts)
+		}
+
+		fmt.Fprintln(cliContext.App.Writer, target)
 		return nil
 	},
 }

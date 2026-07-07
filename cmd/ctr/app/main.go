@@ -20,6 +20,10 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/containerd/log"
+	"github.com/urfave/cli/v2"
+	"google.golang.org/grpc/grpclog"
+
 	"github.com/containerd/containerd/v2/cmd/ctr/commands/content"
 	"github.com/containerd/containerd/v2/cmd/ctr/commands/events"
 	"github.com/containerd/containerd/v2/cmd/ctr/commands/install"
@@ -37,9 +41,6 @@ import (
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/containers"
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/images"
 	"github.com/containerd/imgcrypt/cmd/ctr/commands/run"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
-	"google.golang.org/grpc/grpclog"
 )
 
 var extraCmds = []*cli.Command{}
@@ -48,8 +49,25 @@ func init() {
 	// Discard grpc logs so that they don't mess with our stdio
 	grpclog.SetLoggerV2(grpclog.NewLoggerV2(io.Discard, io.Discard, io.Discard))
 
-	cli.VersionPrinter = func(c *cli.Context) {
-		fmt.Println(c.App.Name, version.Package, c.App.Version)
+	cli.VersionPrinter = func(cliContext *cli.Context) {
+		fmt.Println(cliContext.App.Name, version.Package, cliContext.App.Version)
+	}
+
+	// Override the default flag descriptions for '--version' and '--help'
+	// to align with other flags and start with uppercase.
+	cli.VersionFlag = &cli.BoolFlag{
+		Name:    "version",
+		Aliases: []string{"v"},
+		Usage:   "Print the version",
+
+		DisableDefaultText: true,
+	}
+	cli.HelpFlag = &cli.BoolFlag{
+		Name:    "help",
+		Aliases: []string{"h"},
+		Usage:   "Show help",
+
+		DisableDefaultText: true,
 	}
 }
 
@@ -77,27 +95,27 @@ containerd CLI
 	app.Flags = []cli.Flag{
 		&cli.BoolFlag{
 			Name:  "debug",
-			Usage: "enable debug output in logs",
+			Usage: "Enable debug output in logs",
 		},
 		&cli.StringFlag{
 			Name:    "address",
 			Aliases: []string{"a"},
-			Usage:   "address for containerd's GRPC server",
+			Usage:   "Address for containerd's GRPC server",
 			Value:   defaults.DefaultAddress,
 			EnvVars: []string{"CONTAINERD_ADDRESS"},
 		},
 		&cli.DurationFlag{
 			Name:  "timeout",
-			Usage: "total timeout for ctr commands",
+			Usage: "Total timeout for ctr commands",
 		},
 		&cli.DurationFlag{
 			Name:  "connect-timeout",
-			Usage: "timeout for connecting to containerd",
+			Usage: "Timeout for connecting to containerd",
 		},
 		&cli.StringFlag{
 			Name:    "namespace",
 			Aliases: []string{"n"},
-			Usage:   "namespace to use with commands",
+			Usage:   "Namespace to use with commands",
 			Value:   namespaces.Default,
 			EnvVars: []string{namespaces.NamespaceEnvVar},
 		},
@@ -118,9 +136,9 @@ containerd CLI
 		install.Command,
 		ociCmd.Command,
 	}, extraCmds...)
-	app.Before = func(context *cli.Context) error {
-		if context.Bool("debug") {
-			logrus.SetLevel(logrus.DebugLevel)
+	app.Before = func(cliContext *cli.Context) error {
+		if cliContext.Bool("debug") {
+			return log.SetLevel("debug")
 		}
 		return nil
 	}

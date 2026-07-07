@@ -19,37 +19,40 @@ package containers
 import (
 	"errors"
 
+	"github.com/containerd/console"
 	containerd "github.com/containerd/containerd/v2/client"
 	"github.com/containerd/containerd/v2/cmd/ctr/commands"
+	"github.com/containerd/containerd/v2/cmd/ctr/commands/tasks"
 	"github.com/containerd/containerd/v2/pkg/cio"
 	"github.com/containerd/errdefs"
+	"github.com/containerd/log"
 	"github.com/urfave/cli/v2"
 )
 
-var restoreCommand = cli.Command{
+var restoreCommand = &cli.Command{
 	Name:      "restore",
-	Usage:     "restore a container from checkpoint",
+	Usage:     "Restore a container from checkpoint",
 	ArgsUsage: "CONTAINER REF",
 	Flags: []cli.Flag{
 		&cli.BoolFlag{
 			Name:  "rw",
-			Usage: "restore the rw layer from the checkpoint",
+			Usage: "Restore the rw layer from the checkpoint",
 		},
 		&cli.BoolFlag{
 			Name:  "live",
-			Usage: "restore the runtime and memory data from the checkpoint",
+			Usage: "Restore the runtime and memory data from the checkpoint",
 		},
 	},
-	Action: func(context *cli.Context) error {
-		id := context.Args().First()
+	Action: func(cliContext *cli.Context) error {
+		id := cliContext.Args().First()
 		if id == "" {
 			return errors.New("container id must be provided")
 		}
-		ref := context.Args().Get(1)
+		ref := cliContext.Args().Get(1)
 		if ref == "" {
 			return errors.New("ref must be provided")
 		}
-		client, ctx, cancel, err := commands.NewClient(context)
+		client, ctx, cancel, err := commands.NewClient(cliContext)
 		if err != nil {
 			return err
 		}
@@ -73,7 +76,7 @@ var restoreCommand = cli.Command{
 			containerd.WithRestoreSpec,
 			containerd.WithRestoreRuntime,
 		}
-		if context.Bool("rw") {
+		if cliContext.Bool("rw") {
 			opts = append(opts, containerd.WithRestoreRW)
 		}
 
@@ -81,17 +84,60 @@ var restoreCommand = cli.Command{
 		if err != nil {
 			return err
 		}
-
 		topts := []containerd.NewTaskOpts{}
-		if context.Bool("live") {
+		if cliContext.Bool("live") {
 			topts = append(topts, containerd.WithTaskCheckpoint(checkpoint))
 		}
-
-		task, err := ctr.NewTask(ctx, cio.NewCreator(cio.WithStdio), topts...)
+		spec, err := ctr.Spec(ctx)
 		if err != nil {
 			return err
 		}
 
-		return task.Start(ctx)
+		useTTY := spec.Process.Terminal
+
+		var con console.Console
+		if useTTY {
+			con = console.Current()
+			defer con.Reset()
+			if err := con.SetRaw(); err != nil {
+				return err
+			}
+		}
+
+		task, err := tasks.NewTask(ctx, client, ctr, "", con, false, "", []cio.Opt{}, topts...)
+		if err != nil {
+			return err
+		}
+
+		var statusC <-chan containerd.ExitStatus
+		if useTTY {
+			if statusC, err = task.Wait(ctx); err != nil {
+				return err
+			}
+		}
+
+		if err := task.Start(ctx); err != nil {
+			return err
+		}
+		if !useTTY {
+			return nil
+		}
+
+		if err := tasks.HandleConsoleResize(ctx, task, con); err != nil {
+			log.G(ctx).WithError(err).Error("console resize")
+		}
+
+		status := <-statusC
+		code, _, err := status.Result()
+		if err != nil {
+			return err
+		}
+		if _, err := task.Delete(ctx); err != nil {
+			return err
+		}
+		if code != 0 {
+			return cli.Exit("", int(code))
+		}
+		return nil
 	},
 }

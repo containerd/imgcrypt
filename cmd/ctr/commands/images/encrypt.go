@@ -29,9 +29,9 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var encryptCommand = cli.Command{
+var encryptCommand = &cli.Command{
 	Name:      "encrypt",
-	Usage:     "encrypt an image locally",
+	Usage:     "Encrypt an image locally",
 	ArgsUsage: "[flags] <local> <new name>",
 	Description: `Encrypt an image locally.
 

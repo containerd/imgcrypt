@@ -34,9 +34,9 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var layerinfoCommand = cli.Command{
+var layerinfoCommand = &cli.Command{
 	Name:      "layerinfo",
-	Usage:     "get information about an image's layers",
+	Usage:     "Get information about an image's layers",
 	ArgsUsage: "[flags] <local>",
 	Description: `Get encryption information about the layers of an image.
 
