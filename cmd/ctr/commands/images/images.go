@@ -37,45 +37,48 @@ import (
 var Command = &cli.Command{
 	Name:    "images",
 	Aliases: []string{"image", "i"},
-	Usage:   "manage images",
+	Usage:   "Manage images",
 	Subcommands: cli.Commands{
-		&checkCommand,
-		&exportCommand,
-		&importCommand,
-		&listCommand,
-		&mountCommand,
-		&unmountCommand,
-		&pullCommand,
-		&pushCommand,
-		&removeCommand,
-		&tagCommand,
-		&setLabelsCommand,
-		&convertCommand,
-		&encryptCommand,
-		&decryptCommand,
-		&layerinfoCommand,
+		checkCommand,
+		exportCommand,
+		importCommand,
+		inspectCommand,
+		listCommand,
+		mountCommand,
+		unmountCommand,
+		pullCommand,
+		pushCommand,
+		pruneCommand,
+		removeCommand,
+		tagCommand,
+		setLabelsCommand,
+		convertCommand,
+		usageCommand,
+		encryptCommand,
+		decryptCommand,
+		layerinfoCommand,
 	},
 }
 
-var listCommand = cli.Command{
+var listCommand = &cli.Command{
 	Name:        "list",
 	Aliases:     []string{"ls"},
-	Usage:       "list images known to containerd",
+	Usage:       "List images known to containerd",
 	ArgsUsage:   "[flags] [<filter>, ...]",
 	Description: "list images registered with containerd",
 	Flags: []cli.Flag{
 		&cli.BoolFlag{
 			Name:    "quiet",
 			Aliases: []string{"q"},
-			Usage:   "print only the image refs",
+			Usage:   "Print only the image refs",
 		},
 	},
-	Action: func(context *cli.Context) error {
+	Action: func(cliContext *cli.Context) error {
 		var (
-			filters = context.Args().Slice()
-			quiet   = context.Bool("quiet")
+			filters = cliContext.Args().Slice()
+			quiet   = cliContext.Bool("quiet")
 		)
-		client, ctx, cancel, err := commands.NewClient(context)
+		client, ctx, cancel, err := commands.NewClient(cliContext)
 		if err != nil {
 			return err
 		}
@@ -142,24 +145,24 @@ var listCommand = cli.Command{
 	},
 }
 
-var setLabelsCommand = cli.Command{
+var setLabelsCommand = &cli.Command{
 	Name:        "label",
-	Usage:       "set and clear labels for an image",
+	Usage:       "Set and clear labels for an image",
 	ArgsUsage:   "[flags] <name> [<key>=<value>, ...]",
 	Description: "set and clear labels for an image",
 	Flags: []cli.Flag{
 		&cli.BoolFlag{
 			Name:    "replace-all",
 			Aliases: []string{"r"},
-			Usage:   "replace all labels",
+			Usage:   "Replace all labels",
 		},
 	},
-	Action: func(context *cli.Context) error {
+	Action: func(cliContext *cli.Context) error {
 		var (
-			replaceAll   = context.Bool("replace-all")
-			name, labels = commands.ObjectWithLabelArgs(context)
+			replaceAll   = cliContext.Bool("replace-all")
+			name, labels = commands.ObjectWithLabelArgs(cliContext)
 		)
-		client, ctx, cancel, err := commands.NewClient(context)
+		client, ctx, cancel, err := commands.NewClient(cliContext)
 		if err != nil {
 			return err
 		}
@@ -202,24 +205,24 @@ var setLabelsCommand = cli.Command{
 	},
 }
 
-var checkCommand = cli.Command{
+var checkCommand = &cli.Command{
 	Name:        "check",
-	Usage:       "check existing images to ensure all content is available locally",
+	Usage:       "Check existing images to ensure all content is available locally",
 	ArgsUsage:   "[flags] [<filter>, ...]",
 	Description: "check existing images to ensure all content is available locally",
 	Flags: append([]cli.Flag{
 		&cli.BoolFlag{
 			Name:    "quiet",
 			Aliases: []string{"q"},
-			Usage:   "print only the ready image refs (fully downloaded and unpacked)",
+			Usage:   "Print only the ready image refs (fully downloaded and unpacked)",
 		},
 	}, commands.SnapshotterFlags...),
-	Action: func(context *cli.Context) error {
+	Action: func(cliContext *cli.Context) error {
 		var (
 			exitErr error
-			quiet   = context.Bool("quiet")
+			quiet   = cliContext.Bool("quiet")
 		)
-		client, ctx, cancel, err := commands.NewClient(context)
+		client, ctx, cancel, err := commands.NewClient(cliContext)
 		if err != nil {
 			return err
 		}
@@ -227,7 +230,7 @@ var checkCommand = cli.Command{
 
 		var contentStore = client.ContentStore()
 
-		args := context.Args().Slice()
+		args := cliContext.Args().Slice()
 		imageList, err := client.ListImages(ctx, args...)
 		if err != nil {
 			return fmt.Errorf("failed listing images: %w", err)
@@ -244,11 +247,11 @@ var checkCommand = cli.Command{
 
 		for _, image := range imageList {
 			var (
-				status       string = "complete"
+				status       = "complete"
 				size         string
 				requiredSize int64
 				presentSize  int64
-				complete     bool = true
+				complete     = true
 			)
 
 			available, required, present, missing, err := images.Check(ctx, contentStore, image.Target(), platforms.Default())
@@ -287,7 +290,7 @@ var checkCommand = cli.Command{
 				size = "-"
 			}
 
-			unpacked, err := image.IsUnpacked(ctx, context.String("snapshotter"))
+			unpacked, err := image.IsUnpacked(ctx, cliContext.String("snapshotter"))
 			if err != nil {
 				if exitErr == nil {
 					exitErr = fmt.Errorf("unable to check unpack for %v: %w", image.Name(), err)
@@ -304,7 +307,7 @@ var checkCommand = cli.Command{
 					size,
 					unpacked)
 			} else {
-				if complete {
+				if complete && unpacked {
 					fmt.Println(image.Name())
 				}
 			}
@@ -316,10 +319,10 @@ var checkCommand = cli.Command{
 	},
 }
 
-var removeCommand = cli.Command{
+var removeCommand = &cli.Command{
 	Name:        "delete",
 	Aliases:     []string{"del", "remove", "rm"},
-	Usage:       "remove one or more images by reference",
+	Usage:       "Remove one or more images by reference",
 	ArgsUsage:   "[flags] <ref> [<ref>, ...]",
 	Description: "remove one or more images by reference",
 	Flags: []cli.Flag{
@@ -328,8 +331,8 @@ var removeCommand = cli.Command{
 			Usage: "Synchronously remove image and all associated resources",
 		},
 	},
-	Action: func(context *cli.Context) error {
-		client, ctx, cancel, err := commands.NewClient(context)
+	Action: func(cliContext *cli.Context) error {
+		client, ctx, cancel, err := commands.NewClient(cliContext)
 		if err != nil {
 			return err
 		}
@@ -338,9 +341,9 @@ var removeCommand = cli.Command{
 			exitErr    error
 			imageStore = client.ImageService()
 		)
-		for i, target := range context.Args().Slice() {
+		for i, target := range cliContext.Args().Slice() {
 			var opts []images.DeleteOpt
-			if context.Bool("sync") && i == context.NArg()-1 {
+			if cliContext.Bool("sync") && i == cliContext.NArg()-1 {
 				opts = append(opts, images.SynchronousDelete())
 			}
 			if err := imageStore.Delete(ctx, target, opts...); err != nil {
@@ -359,5 +362,75 @@ var removeCommand = cli.Command{
 		}
 
 		return exitErr
+	},
+}
+
+var pruneCommand = &cli.Command{
+	Name:  "prune",
+	Usage: "Remove unused images",
+	Flags: []cli.Flag{
+		&cli.BoolFlag{
+			Name:  "all", // TODO: add more filters
+			Usage: "Remove all unused images, not just dangling ones (if all is not specified no images will be pruned)",
+		},
+	},
+	// adapted from `nerdctl`:
+	// https://github.com/containerd/nerdctl/blob/272dc9c29fc1434839d3ec63194d7efa24d7c0ef/cmd/nerdctl/image_prune.go#L86
+	Action: func(cliContext *cli.Context) error {
+		client, ctx, cancel, err := commands.NewClient(cliContext)
+		if err != nil {
+			return err
+		}
+		defer cancel()
+
+		all := cliContext.Bool("all")
+		if !all {
+			log.G(ctx).Warn("No images pruned. `image prune` requires --all to be specified.")
+			// NOP
+			return nil
+		}
+
+		var (
+			imageStore     = client.ImageService()
+			containerStore = client.ContainerService()
+		)
+		imageList, err := imageStore.List(ctx)
+		if err != nil {
+			return err
+		}
+		containerList, err := containerStore.List(ctx)
+		if err != nil {
+			return err
+		}
+		usedImages := make(map[string]struct{})
+		for _, container := range containerList {
+			usedImages[container.Image] = struct{}{}
+		}
+
+		var removedImages []string
+		for _, image := range imageList {
+			if _, ok := usedImages[image.Name]; ok {
+				continue
+			}
+			removedImages = append(removedImages, image.Name)
+		}
+
+		var delOpts []images.DeleteOpt
+		for i, imageName := range removedImages {
+			// Delete the last image reference synchronously to trigger garbage collection.
+			// This is best effort. It is possible that the image reference is deleted by
+			// someone else before this point.
+			if i == len(removedImages)-1 {
+				delOpts = []images.DeleteOpt{images.SynchronousDelete()}
+			}
+			if err := imageStore.Delete(ctx, imageName, delOpts...); err != nil {
+				if !errdefs.IsNotFound(err) {
+					log.G(ctx).WithError(err).Warnf("failed to delete image %s", imageName)
+				}
+				continue
+			}
+			log.G(ctx).Infof("deleted image: %s\n", imageName)
+		}
+		return nil
 	},
 }

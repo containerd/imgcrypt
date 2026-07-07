@@ -27,10 +27,10 @@ import (
 var pluginCmds = []*cli.Command{}
 
 func main() {
-	application := app.New()
-	application.Commands = append(application.Commands, pluginCmds...)
-	if err := application.Run(os.Args); err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "ctr: %s\n", err)
+	app := app.New()
+	app.Commands = append(app.Commands, pluginCmds...)
+	if err := app.Run(os.Args); err != nil {
+		fmt.Fprintf(os.Stderr, "ctr: %s\n", err)
 		os.Exit(1)
 	}
 }

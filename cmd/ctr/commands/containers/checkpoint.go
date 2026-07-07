@@ -26,34 +26,34 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var checkpointCommand = cli.Command{
+var checkpointCommand = &cli.Command{
 	Name:      "checkpoint",
-	Usage:     "checkpoint a container",
+	Usage:     "Checkpoint a container",
 	ArgsUsage: "CONTAINER REF",
 	Flags: []cli.Flag{
 		&cli.BoolFlag{
 			Name:  "rw",
-			Usage: "include the rw layer in the checkpoint",
+			Usage: "Include the rw layer in the checkpoint",
 		},
 		&cli.BoolFlag{
 			Name:  "image",
-			Usage: "include the image in the checkpoint",
+			Usage: "Include the image in the checkpoint",
 		},
 		&cli.BoolFlag{
 			Name:  "task",
-			Usage: "checkpoint container task",
+			Usage: "Checkpoint container task",
 		},
 	},
-	Action: func(context *cli.Context) error {
-		id := context.Args().First()
+	Action: func(cliContext *cli.Context) error {
+		id := cliContext.Args().First()
 		if id == "" {
 			return errors.New("container id must be provided")
 		}
-		ref := context.Args().Get(1)
+		ref := cliContext.Args().Get(1)
 		if ref == "" {
 			return errors.New("ref must be provided")
 		}
-		client, ctx, cancel, err := commands.NewClient(context)
+		client, ctx, cancel, err := commands.NewClient(cliContext)
 		if err != nil {
 			return err
 		}
@@ -62,13 +62,13 @@ var checkpointCommand = cli.Command{
 			containerd.WithCheckpointRuntime,
 		}
 
-		if context.Bool("image") {
+		if cliContext.Bool("image") {
 			opts = append(opts, containerd.WithCheckpointImage)
 		}
-		if context.Bool("rw") {
+		if cliContext.Bool("rw") {
 			opts = append(opts, containerd.WithCheckpointRW)
 		}
-		if context.Bool("task") {
+		if cliContext.Bool("task") {
 			opts = append(opts, containerd.WithCheckpointTask)
 		}
 		container, err := client.LoadContainer(ctx, id)

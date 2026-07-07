@@ -32,7 +32,7 @@ import (
 	runtimeoptions "github.com/containerd/containerd/api/types/runtimeoptions/v1"
 	containerd "github.com/containerd/containerd/v2/client"
 	"github.com/containerd/containerd/v2/contrib/apparmor"
-	"github.com/containerd/containerd/v2/contrib/nvidia"
+	//"github.com/containerd/containerd/v2/contrib/nvidia"
 	"github.com/containerd/containerd/v2/contrib/seccomp"
 	"github.com/containerd/containerd/v2/core/containers"
 	"github.com/containerd/containerd/v2/core/snapshots"
@@ -303,9 +303,9 @@ func NewContainer(ctx gocontext.Context, client *containerd.Client, context *cli
 				Path: parts[1],
 			}))
 		}
-		if context.IsSet("gpus") {
-			opts = append(opts, nvidia.WithGPUs(nvidia.WithDevices(context.IntSlice("gpus")...), nvidia.WithAllCapabilities))
-		}
+		//if context.IsSet("gpus") {
+		//	opts = append(opts, nvidia.WithGPUs(nvidia.WithDevices(context.IntSlice("gpus")...), nvidia.WithAllCapabilities))
+		//}
 		if context.IsSet("allow-new-privs") {
 			opts = append(opts, oci.WithNewPrivileges)
 		}

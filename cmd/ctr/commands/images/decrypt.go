@@ -30,9 +30,9 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var decryptCommand = cli.Command{
+var decryptCommand = &cli.Command{
 	Name:      "decrypt",
-	Usage:     "decrypt an image locally",
+	Usage:     "Decrypt an image locally",
 	ArgsUsage: "[flags] <local> <new name>",
 	Description: `Decrypt an image locally.
 
