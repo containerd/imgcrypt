@@ -1051,7 +1051,18 @@ setupPKCS11() {
 	# Env. variable for softhsm_setup
 	export SOFTHSM_SETUP_CONFIGDIR=${WORKDIR}
 	# Env. variable for ctr-enc
-	export OCICRYPT_CONFIG=internal
+	export OCICRYPT_CONFIG=${WORKDIR}/pkcs11-conf.yaml
+	cat <<_EOF_ >${OCICRYPT_CONFIG}
+pkcs11:
+  module-directories:
+    - /usr/lib64/pkcs11/
+    - /usr/lib/pkcs11/
+    - /usr/lib/softhsm/
+  allowed-module-paths:
+    - /usr/lib64/pkcs11/
+    - /usr/lib/pkcs11/
+    - /usr/lib/softhsm/
+_EOF_
 	SOFTHSM_KEY=${WORKDIR}/softhsm_key.yaml
 
 	output=$(${SOFTHSM_SETUP} setup 2>&1)
