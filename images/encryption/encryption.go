@@ -316,7 +316,8 @@ func cryptChildren(ctx context.Context, cs content.Store, desc ocispec.Descripto
 			} else {
 				newLayers = append(newLayers, child)
 			}
-		case images.MediaTypeDockerSchema2LayerForeign, images.MediaTypeDockerSchema2LayerForeignGzip, "application/vnd.in-toto+json":
+		case images.MediaTypeDockerSchema2LayerForeign, images.MediaTypeDockerSchema2LayerForeignGzip,
+			"application/vnd.in-toto+json", "application/vnd.oci.empty.v1+json":
 			// never encrypt/decrypt
 			newLayers = append(newLayers, child)
 		default:

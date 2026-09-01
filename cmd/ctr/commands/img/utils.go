@@ -73,7 +73,8 @@ func GetImageLayerDescriptors(ctx context.Context, cs content.Store, desc ocispe
 
 			lis = append(lis, tmp...)
 		}
-	case images.MediaTypeDockerSchema2Config, ocispec.MediaTypeImageConfig, "application/vnd.in-toto+json":
+	case images.MediaTypeDockerSchema2Config, ocispec.MediaTypeImageConfig,
+		"application/vnd.in-toto+json", "application/vnd.oci.empty.v1+json":
 	default:
 		return nil, fmt.Errorf("unhandled media type %s: %w", desc.MediaType, errdefs.ErrInvalidArgument)
 	}
