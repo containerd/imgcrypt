@@ -50,7 +50,7 @@ state = "/tmp/run/containerd"
 # sudo ~/src/github.com/containerd/containerd/bin/containerd -c config.toml
 ```
 
-Create an RSA key pair using the openssl command line tool and encrypted an image:
+Create an RSA key pair using the openssl command line tool and encrypt an image:
 
 ```
 # openssl genrsa -out mykey.pem
