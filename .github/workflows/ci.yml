@@ -82,6 +82,7 @@ jobs:
         with:
           repository: containerd/containerd
           path: src/github.com/containerd/containerd
+          ref: release/2.4
 
       - uses: actions/checkout@v7
         with:
